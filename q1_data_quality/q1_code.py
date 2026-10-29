@@ -71,6 +71,34 @@ def profile_columns(raw, typed):
     return pd.DataFrame(rows)
 
 
+def stock_description_profile(raw):
+    """统计双向对应数量；缺失不参与对应关系，文本不去空格或改大小写。"""
+    valid = ~missing_mask(raw["StockCode"]) & ~missing_mask(raw["Description"])
+    pairs = raw.loc[valid, ["StockCode", "Description"]].drop_duplicates()
+    per_stock = pairs.groupby("StockCode", sort=False)["Description"].nunique()
+    per_description = pairs.groupby("Description", sort=False)["StockCode"].nunique()
+    summary = pd.DataFrame([{
+        "两列均非缺失行数": int(valid.sum()),
+        "至少一列缺失行数": int((~valid).sum()),
+        "不同对应组合数": len(pairs),
+        "StockCode数量": len(per_stock),
+        "Description数量": len(per_description),
+        "对应多个Description的StockCode数": int(per_stock.gt(1).sum()),
+        "对应多个StockCode的Description数": int(per_description.gt(1).sum()),
+    }])
+    distribution = per_stock.value_counts().sort_index().rename_axis(
+        "每个StockCode对应的不同Description数量"
+    ).reset_index(name="StockCode数量")
+    # 优先展示多描述代码的对应示例，按原始数据中的出现顺序选取五个组合。
+    examples = pairs[pairs["StockCode"].isin(per_stock[per_stock.gt(1)].index)].head(5).copy()
+    if examples.empty:
+        examples = pairs.head(5).copy()
+    examples["该StockCode对应的Description总数"] = examples["StockCode"].map(per_stock)
+    for column in ("StockCode", "Description"):
+        examples[column] = examples[column].map(repr)
+    return summary, distribution, examples
+
+
 def numeric_checks(raw):
     """仅检查 Quantity、Price 的数值可解析性、分布和取值。"""
     summaries, checks = [], []
@@ -167,6 +195,11 @@ def main(input_path=None, output_dir=None):
                 "按指定类型读取：Quantity 为 int64，Price 为 float64，其余列为 str；InvoiceDate 只在时间统计的派生视图中解析为日期。"
                 "缺失定义：空字段或仅空白字符，保留原值；NA/NULL 等字面文本不自动判为缺失。"
                 "单列重复比例分母为该列非缺失行数；重复不等于数据错误。Customer ID 按字符串标识符处理。"]
+    correspondence, distribution, examples = stock_description_profile(raw)
+    sections += ["### StockCode 与 Description 对应关系",
+                 "仅统计两列均非缺失的记录；按原始文本精确比较，保留首尾空格和大小写。对应数量指不同值数量，不是交易行数。",
+                 table(correspondence), table(distribution),
+                 "五条不同对应组合示例（优先展示对应多个描述的商品代码）：", table(examples)]
     numeric, checks = numeric_checks(raw)
     sections += ["## 4. 数值分布", table(numeric),
                  "统计排除缺失、无法解析及非有限值，原表不变。std 使用样本标准差（ddof=1）。Customer ID 是标识符，不计算金额式分布。",
@@ -181,6 +214,14 @@ def main(input_path=None, output_dir=None):
         top["原始值"] = top["原始值"].map(repr)
         sections += [f"### {name}：非缺失唯一值 {values.nunique():,} 个", table(top)]
         sections.append(f"首尾含空白的非缺失记录数：{int((values != values.str.strip()).sum())}。")
+        if name == "StockCode":
+            whitespace_rows = raw.loc[values.index[values.ne(values.str.strip())]].copy()
+            if not whitespace_rows.empty:
+                whitespace_rows.insert(0, "数据行序号(从1开始，不含表头)", whitespace_rows.index + 1)
+                # 显示完整原始记录，repr 让空白字符在报告中可见。
+                for column in raw.columns:
+                    whitespace_rows[column] = whitespace_rows[column].map(repr)
+                sections += ["StockCode 首尾含空白的非缺失记录（完整内容）：", table(whitespace_rows)]
     sections += ["## 7. 重复记录与候选主键", table(key_checks(raw)),
                  "README 未声明交易明细主键。全列重复按原始文本精确比较；多余行数使用 keep='first'，涉及行数使用 keep=False。"
                  "候选组合仅用于检验，不能因发票号重复就删除明细，也不新增行号冒充业务主键。"]

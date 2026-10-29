@@ -42,6 +42,35 @@
 
 按指定类型读取：Quantity 为 int64，Price 为 float64，其余列为 str；InvoiceDate 只在时间统计的派生视图中解析为日期。缺失定义：空字段或仅空白字符，保留原值；NA/NULL 等字面文本不自动判为缺失。单列重复比例分母为该列非缺失行数；重复不等于数据错误。Customer ID 按字符串标识符处理。
 
+### StockCode 与 Description 对应关系
+
+仅统计两列均非缺失的记录；按原始文本精确比较，保留首尾空格和大小写。对应数量指不同值数量，不是交易行数。
+
+| 两列均非缺失行数 | 至少一列缺失行数 | 不同对应组合数 | StockCode数量 | Description数量 | 对应多个Description的StockCode数 | 对应多个StockCode的Description数 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1062989 | 4382 | 6570 | 4950 | 5698 | 1232 | 293 |
+
+| 每个StockCode对应的不同Description数量 | StockCode数量 |
+| --- | --- |
+| 1 | 3718 |
+| 2 | 953 |
+| 3 | 204 |
+| 4 | 57 |
+| 5 | 9 |
+| 6 | 4 |
+| 7 | 4 |
+| 9 | 1 |
+
+五条不同对应组合示例（优先展示对应多个描述的商品代码）：
+
+| StockCode | Description | 该StockCode对应的Description总数 |
+| --- | --- | --- |
+| '79323P' | 'PINK CHERRY LIGHTS' | 2 |
+| '79323W' | ' WHITE CHERRY LIGHTS' | 3 |
+| '21232' | 'STRAWBERRY CERAMIC TRINKET BOX' | 2 |
+| '21523' | 'FANCY FONT HOME SWEET HOME DOORMAT' | 4 |
+| '22350' | 'CAT BOWL ' | 2 |
+
 ## 4. 数值分布
 
 | 列名 | 有限数值数 | min | max | mean | std(ddof=1) | max-min | Q1 | median | Q3 |
@@ -102,6 +131,12 @@
 | '22383' | 2540 |
 
 首尾含空白的非缺失记录数：1。
+
+StockCode 首尾含空白的非缺失记录（完整内容）：
+
+| 数据行序号(从1开始，不含表头) | Invoice | StockCode | Description | Quantity | InvoiceDate | Price | Customer ID | Country |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 260887 | '514532' | '47503J ' | 'SET/3 FLORAL GARDEN TOOLS IN BAG' | '1' | '2010-07-05 10:07:00' | '16.13' | '' | 'United Kingdom' |
 
 ### Description：非缺失唯一值 5,698 个
 
