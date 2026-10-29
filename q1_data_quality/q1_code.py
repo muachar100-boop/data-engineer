@@ -9,6 +9,21 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[1]
+# 基于本次实际运行结果整理的人工观察，不将业务假设直接判为数据错误。
+SUSPICIOUS_FINDINGS = """## 可疑现象总结（待进一步核查）
+
+1. **字段缺失**：Description 存在缺失；Customer ID 大量缺失，缺失比例约为 22.77%，可能影响客户识别和客户维度分析。
+2. **商品代码与描述的对应关系**：从商品识别语义出发，StockCode 与 Description 的对应关系值得核查；实际同时存在一个 StockCode 对应多个 Description、一个 Description 对应多个 StockCode 的情况。是否应严格一一对应，仍需结合描述变更、格式差异及业务规则确认。
+3. **数量负值及对称极值**：Quantity 存在大量负数，最小值与最大值的绝对值相等，需核查是否涉及取消、退货或冲销等业务记录。
+4. **大额负价格**：Price 存在 5 条绝对值较大的负数记录，需核查对应记录的业务含义。
+5. **零价格**：Price 存在较多为 0 的记录，偏离普通付费商品交易的价格预期；需核查是否涉及赠品、调整记录或价格缺录，暂不直接判定为错误。
+6. **极大的正价格**：Price 的最大正向值远大于第三四分位数（Q3），可能是特殊记录，需结合商品代码和描述核查。
+7. **商品代码含空白**：StockCode 存在 1 条首尾含空白的非缺失记录，原始值为 '47503J '，末尾空格可能影响匹配、分组及唯一值统计。
+8. **整行完全重复**：存在大量按全部原始字段比较完全相同的记录，需要校对是否为重复导入或缺少明细标识导致的无法区分，暂不直接删除。
+9. **跨年连续无记录区间**：2009-12-24 至 2010-01-03、2010-12-24 至 2011-01-03 均连续 11 天无记录，可能与节假日停业有关，也需排查数据采集或导出中断的可能。
+
+以上为基于当前数据的人工观察和待验证假设；原始数据保留，不据此直接删除或填补。输入数据变化后，应重新核对本总结中的具体数量和日期。
+"""
 # 题目中的业务名称 -> 当前下载版本的原始列名。只用于解释，不重命名数据。
 FIELD_MAP = {
     "InvoiceNo": "Invoice", "StockCode": "StockCode",
@@ -185,7 +200,7 @@ def main(input_path=None, output_dir=None):
     absent = set(FIELD_MAP.values()) - set(raw.columns)
     if absent:
         raise ValueError(f"实际列名为 {raw.columns.tolist()}；缺少所需字段：{sorted(absent)}")
-    sections = ["# Q1.1 数据质量统计（待人工分析）",
+    sections = ["# Q1.1 数据质量统计", SUSPICIOUS_FINDINGS,
                 f"输入：`{source.resolve()}`；实际数据行数：{len(raw):,}；列数：{len(raw.columns)}。",
                 "## 1. 实际字段与题目名称",
                 table(pd.DataFrame(FIELD_MAP.items(), columns=["题目业务名称", "实际字段名"])),
@@ -229,9 +244,9 @@ def main(input_path=None, output_dir=None):
     sections += ["## 8. 时间范围和记录数量", table(dates),
                  "按有效 InvoiceDate 统计交易明细行数（不是订单数），不推断时区；连续日期/月中无记录的区间计为 0。首尾月份可能不完整。",
                  "### 每月记录数", table(monthly), "### 每日记录数", table(daily),
-                 "## 9. 待运行后人工讨论",
+                 "## 9. 后续核查说明",
                  "以上为统计和规则标记，不自动认定负值、极端值、重复记录或字母代码是错误。"
-                 "至少五个可疑现象及其解释将在核对实际输出后补充；当前不预填业务结论。"]
+                 "报告开头已列出当前观察到的九项可疑现象，相关业务解释仍需进一步核查。"]
     output.mkdir(parents=True, exist_ok=True)
     report = output / "data_quality_report.md"
     report.write_text("\n\n".join(sections) + "\n", encoding="utf-8")
