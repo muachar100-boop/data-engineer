@@ -192,189 +192,155 @@ def date_profile(raw):
 
 
 def code_meaning(code):
-    """依据当前数据中的描述提出业务解释；未知代码保留不确定性。"""
+    """按人工核查结论标注业务解释，不改变原始值。"""
     meanings = {
-        "ADJUST": "人工调整（描述含操作者及时间），非普通商品销售",
-        "ADJUST2": "人工调整（描述含操作者及时间），非普通商品销售",
-        "AMAZONFEE": "Amazon 平台费用", "B": "坏账调整",
-        "BANK CHARGES": "银行费用", "C2": "运输/运费（CARRIAGE）",
-        "CRUK": "CRUK 佣金；机构及具体收费规则无法仅凭记录确定",
-        "D": "折扣", "DOT": "线上渠道邮费（DOTCOM POSTAGE）",
-        "M": "手工记录；需逐笔判断用途", "m": "手工记录；需逐笔判断用途",
-        "PADS": "描述为配套垫片，可能是商品，不能仅因代码格式排除",
-        "POST": "邮费", "S": "样品；销售归属需业务确认",
-        "TEST001": "描述明确为测试商品，需核查是否测试交易",
-        "TEST002": "描述明确为测试商品，需核查是否测试交易",
-        "47503J ": "末尾空格造成格式不匹配，描述为园艺工具，可能仍是商品",
+        "ADJUST": "人工调整", "ADJUST2": "人工调整", "AMAZONFEE": "Amazon平台费用",
+        "B": "销售坏账调整", "BANK CHARGES": "银行费用", "CRUK": "CRUK佣金",
+        "D": "折扣", "DOT": "线上渠道邮费", "M": "手工记录", "m": "手工记录",
+        "POST": "邮费", "C2": "运输/运费（CARRIAGE）",
+        "TEST001": "测试商品，需核查是否测试交易", "TEST002": "测试商品，需核查是否测试交易",
+        "S": "样品", "PADS": "商品", "DCGSSBOY": "商品",
+        "DCGSSGIRL": "商品", "C3": "缺失值，可能为记录出错",
+        "DCGSLBOY": "缺失值，可能为记录出错", "DCGSLGIRL": "缺失值，可能为记录出错",
+        "GIFT": "缺失值，可能为记录出错",
+        "gift_0001_60": "缺失值，记录出错（人工待核查判断）",
+        "gift_0001_90": "缺失值，记录出错（人工待核查判断）",
+        "47503J ": "商品代码末尾空格，描述为园艺工具",
     }
     if code in meanings:
         return meanings[code]
-    if code.startswith("gift_"):
-        return "礼券相关编码；有面额描述时支持此推断，空描述记录需核查；售券不宜直接等同商品收入"
-    if code.startswith("DCGS") or code == "SP1002":
-        return "特殊商品/渠道编码候选；结合本行描述核查，不能仅按格式判为非商品"
-    return "描述证据不足，业务含义待核查"
+    if code.startswith("gift_0001_"):
+        return "礼物券"
+    return "业务含义待核查"
 
 
 def q12_invoice(data):
-    """步骤一：完整统计非纯数字发票的前导非数字部分及记录特征。"""
+    """步骤一：精简展示前缀次数、描述证据和需要核查的正值。"""
     unusual = data.loc[~data["Invoice"].str.fullmatch(r"[0-9]+")].copy()
     unusual["前缀"] = unusual["Invoice"].str.extract(r"^([^0-9]+)", expand=False).fillna("无前导非数字字符")
-    summary = unusual.groupby("前缀").agg(
-        行数=("Invoice", "size"), 不同发票数=("Invoice", "nunique"),
-        Quantity_min=("Quantity", "min"), Quantity_max=("Quantity", "max"),
-        Price_min=("Price", "min"), Price_max=("Price", "max"),
-        净金额=("Amount", "sum"),
-        负数量行数=("Quantity", lambda s: s.lt(0).sum()),
-        正数量行数=("Quantity", lambda s: s.gt(0).sum()),
-    ).reset_index()
+    summary = unusual.groupby("前缀").agg(出现次数=("Invoice", "size")).reset_index()
+    summary["业务含义"] = summary["前缀"].map({"A": "销售坏账记录（财务调整）", "C": "取消交易并退款的记录（1条正值待确认）"}).fillna("待核查")
     sections = ["## 1. Invoice 非纯数字前缀", table(summary),
-                "出现次数同时给出明细行数和不同发票数，避免把订单与明细混淆。提取规则为前导连续非数字字符；无前导前缀的异常格式也会单独保留。"]
-    for prefix, group in unusual.groupby("前缀"):
-        descriptions = group["Description"].value_counts().head(10).rename_axis("Description").reset_index(name="行数")
-        sections += [f"### 前缀 {prefix}：描述 TOP 10", table(descriptions),
-                     "记录示例：", table(group.head(6))]
-        exceptions = group.loc[group["Quantity"].ge(0)] if prefix == "C" else group
-        if prefix == "C" and len(exceptions):
-            sections += ["C 前缀中数量非负的例外（全部）：", table(exceptions)]
-    sections += [
-        "**解读与销售口径**：C 前缀以负数量为主，结合取消发票标记及描述，支持取消/退货/冲销推断，但数量正值例外需逐笔核查。"
-        "A 前缀的描述为 Adjust bad debt，支持坏账调整解释；不能将其当作商品销售或普通退货。",
-        "商品正向销售额应统计经确认的销售，C 记录单列为取消/退货，并在核实对应关系后用于销售净额；A 记录单列为财务调整，不混入商品销售额。"
-        "原始带符号金额总和仅是交易记录净额，不自动等于营业收入。不能对负金额取绝对值后计入销售。",
-        "支持代码：`q12_invoice()`；核心为 `Invoice.str.fullmatch(r'[0-9]+')`、`str.extract(r'^([^0-9]+)')` 和按前缀分组汇总。",
-    ]
+                "出现次数按交易明细行计：A 出现6次，描述均为 Adjust bad debt；C 出现19494次，其中19493条 Quantity 为负，1条为正。C 的取消及退款含义是业务解释，实际资金退款状态仍需来源系统确认。"]
+    cols = ["Invoice", "StockCode", "Description", "Quantity", "Price", "Amount"]
+    sections += ["A 前缀的记录证据：", table(unusual.loc[unusual["前缀"].eq("A"), cols]),
+                 "C 前缀中正数量的例外（后续确认）：", table(unusual.loc[unusual["前缀"].eq("C") & unusual["Quantity"].gt(0), cols]),
+                 "**销售总额口径**：A 是财务调整，不应该算入销售总额；C 应按原始带符号金额如实加入销售净额计算，通常作为退款扣减，不能取绝对值累加。1条正值保留原符号并单列待确认。",
+                 "支持代码：`q12_invoice()`，以 fullmatch 筛出非纯数字 Invoice，再提取前缀并统计行数。"]
     return sections
+
+
+def stock_selection(data):
+    """去掉仅含字母数字的混合代码，保留人工指定的五种例外。"""
+    codes = data["StockCode"]
+    conventional = codes.str.fullmatch(r"[0-9]+[A-Za-z]*")
+    mixed = codes.str.fullmatch(r"[A-Za-z0-9]+") & codes.str.contains(r"[A-Za-z]") & codes.str.contains(r"[0-9]")
+    return (~conventional & ~mixed) | codes.isin(["C3", "C2", "ADJUST2", "TEST001", "TEST002"])
 
 
 def q12_stock(data):
-    """步骤二：格式筛选不是清洗规则，展示所有代码和全部不同描述。"""
-    mask = ~data["StockCode"].str.fullmatch(r"[0-9]+[A-Za-z]*")
-    selected = data.loc[mask]
+    """步骤二：过滤仅作用于展示集合，按剩余集合重新计算整体占比。"""
+    selected = data.loc[stock_selection(data)]
     summary = selected.groupby("StockCode", sort=True).agg(
         行数=("Invoice", "size"), 净金额=("Amount", "sum"),
-        绝对金额和=("AbsAmount", "sum"),
-        描述=("Description", lambda s: repr(s.drop_duplicates().tolist())),
+        描述=("Description", lambda x: repr(x.drop_duplicates().tolist())),
     ).reset_index()
-    summary["占全部行(%)"] = summary["行数"] / len(data) * 100
-    summary["占全表净金额(%)"] = summary["净金额"] / data["Amount"].sum() * 100
-    summary["占全表绝对金额(%)"] = summary["绝对金额和"] / data["AbsAmount"].sum() * 100
-    summary["可能业务含义"] = summary["StockCode"].map(code_meaning)
+    summary["行数占比(%)"] = summary["行数"] / len(data) * 100
+    summary["净金额占比(%)"] = summary["净金额"] / data["Amount"].sum() * 100
+    summary["业务解释"] = summary["StockCode"].map(code_meaning)
     summary["StockCode"] = summary["StockCode"].map(repr)
-    overall = pd.DataFrame([{
-        "代码数量": selected["StockCode"].nunique(), "行数": len(selected),
-        "行数占比(%)": mask.mean() * 100, "净金额": selected["Amount"].sum(),
-        "净金额占比(%)": selected["Amount"].sum() / data["Amount"].sum() * 100,
-        "绝对金额占比(%)": selected["AbsAmount"].sum() / data["AbsAmount"].sum() * 100,
-    }])
+    overall = pd.DataFrame([{"代码数": selected["StockCode"].nunique(), "行数": len(selected),
+        "行数占比(%)": len(selected) / len(data) * 100, "净金额": selected["Amount"].sum(),
+        "净金额占比(%)": selected["Amount"].sum() / data["Amount"].sum() * 100}])
     assert summary["行数"].sum() == len(selected)
-    assert np.isclose(summary["净金额"].sum(), selected["Amount"].sum())
-    return ["## 2. StockCode 格式异常与业务含义",
-            "规则：纯数字 `[0-9]+` 或数字后跟一个/多个英文字母 `[0-9]+[A-Za-z]+` 为常规格式，"
-            "合并写作 `[0-9]+[A-Za-z]*` 并使用 fullmatch。保留空格和大小写，空值也会落入待核查集合。",
-            "### 整体占比", table(overall), "### 每种代码（全部不同描述）", table(summary),
-            "**结论**：POST、DOT、C2 的描述支持运费解释；AMAZONFEE、BANK CHARGES、CRUK 支持费用/佣金解释；"
-            "D 为折扣，B 为坏账调整，M/m 为手工记录。DCGS、SP1002、PADS 等可含实际商品，不能统称为非商品。"
-            "礼券、样品、测试记录及空描述代码应独立核查；金额贡献为负说明存在净扣减，不代表计算错误。",
-            "支持代码：`q12_stock()`、`code_meaning()`。金额占比的分母均为全表对应金额，不是筛选集合内部金额。"]
+    return ["## 2. StockCode 代码与业务解释",
+            "展示集合去掉纯数字、数字后接字母，以及仅由字母和数字组成的混合代码；保留纯字母、下划线、空格等特殊格式。C3、C2、ADJUST2、TEST001、TEST002 按人工指定名单作为例外保留。过滤只影响分析展示，不删除原始记录。整体占比已按当前展示集合重算，分母仍为全表。",
+            table(overall), table(summary),
+            "表中“缺失值”指 Description 缺失，不是 StockCode 缺失。“记录出错”属于人工待核查判断，尚未依据该标签删除记录。PADS、DCGSSBOY、DCGSSGIRL 按商品解释；gift_0001_数字按礼物券解释，其中60、90单列为缺失描述记录。",
+            "支持代码：`stock_selection()`、`q12_stock()`、`code_meaning()`。"]
 
 
 def q12_extremes(data):
-    """步骤三：读取题目指定数量并补充实际最大/最小值，展示关联证据。"""
+    """步骤三：保留完整极值和负价格证据，关联只作文字说明。"""
     requested = data.loc[data["Quantity"].isin([80995, -80995])]
-    extrema = data.loc[data["Quantity"].isin([data["Quantity"].min(), data["Quantity"].max()])]
-    sections = ["## 3. 极端数量与负价格",
-                f"实际 Quantity 最小值为 {data['Quantity'].min()}，最大值为 {data['Quantity'].max()}。",
-                "### Quantity 为 80995 或 -80995 的完整记录", table(requested),
-                "### 实际最小/最大数量记录", table(extrema)]
+    cols = ["数据行序号", "Invoice", "StockCode", "Description", "Quantity", "InvoiceDate", "Price", "Customer ID", "Country", "Amount"]
+    sections = ["## 3. 可疑的极端值", "### 数量极值完整记录", table(requested[cols])]
     positive = requested.loc[requested["Quantity"].gt(0)]
     negative = requested.loc[requested["Quantity"].lt(0)]
     linked = positive.merge(negative, on=["Customer ID", "StockCode", "Price"], suffixes=("_正", "_负"))
-    if len(linked):
-        linked["间隔分钟"] = (pd.to_datetime(linked["InvoiceDate_负"]) - pd.to_datetime(linked["InvoiceDate_正"])).dt.total_seconds() / 60
-        linked["合计金额"] = linked["Amount_正"] + linked["Amount_负"]
-        sections += ["### 同客户、同商品、同单价的关联候选", table(linked)]
-    negatives = data.loc[data["Price"].lt(0)]
-    sections += ["### 负价格记录（全部）", table(negatives),
-                 "### 与负价格相同 StockCode 的所有记录（检查正向调整）",
-                 table(data.loc[data["StockCode"].isin(negatives["StockCode"].unique())]),
-                 "**解读**：两条数量极值属于同客户、同商品、同单价，且负向发票带 C 前缀；结合时间间隔和合计金额，"
-                 "强烈支持原交易被取消/冲销的解释。无法仅凭 CSV 判断最初巨量下单是否录入错误，因此不能将其当作已实现的巨额销售，也不能直接删除审计证据。",
-                 "负价格记录共同出现 A 前缀、StockCode B、Description 为 Adjust bad debt、Quantity 为 1、Customer ID 缺失，国家为 United Kingdom。"
-                 "同代码还存在正价格调整，说明不是简单的商品单价为负；支持财务坏账调整解释，具体会计方向仍需账务规则确认。",
-                 "**处理判断**：保留全部原始记录并标记候选关联；商品销售指标与坏账调整分开，取消金额按核实后的净额口径处理。"
-                 "只有来源系统确认错误且可追溯时才考虑下游纠错，当前不删除。",
-                 "支持代码：`q12_extremes()`；使用 `isin`、同客户/商品/价格的 `merge` 和时间差验证关联，没有将相反数量自动当作确定匹配。"]
+    for row in linked.itertuples(index=False):
+        minutes = (pd.Timestamp(row.InvoiceDate_负) - pd.Timestamp(row.InvoiceDate_正)).total_seconds() / 60
+        sections.append(f"关联证据：同客户、同商品、同单价，时间间隔 {minutes:g} 分钟，合计金额 {row.Amount_正 + row.Amount_负:.2f}，支持取消/冲销解释；初始大额下单是否录入错误仍需确认。")
+    sections += ["### 负价格完整记录", table(data.loc[data["Price"].lt(0), cols]),
+                 "负价格记录均为 A 前缀、StockCode B、Description 为 Adjust bad debt、Quantity 为1、Customer ID缺失、Country为United Kingdom，因此属于销售坏账财务调整。",
+                 "**极端值处理建议**：C 类异常极值在确认确为错误交易及其取消冲销后，可从下游有效销售明细中删除对应的正负交易对；确认前保留。不能仅删除负向 C 行而保留原正向销售，否则会高估销售额。正常退款 C 记录仍按第1节如实参与净额计算。A 类坏账财务调整不可删除，应保留用于财务审计，并与商品销售额分开统计。本次不执行任何删除。",
+                 "支持代码：`q12_extremes()`，使用 isin、merge 和时间差核对关联，不再输出关联宽表或同代码调整表。"]
     return sections
 
 
-def q12_customers(data):
-    """步骤四：在完整记录上比较匿名与已识别群体；客单价按发票聚合。"""
-    groups = data.assign(客户组=np.where(missing_mask(data["Customer ID"]), "Customer ID缺失", "Customer ID非缺失"))
-    summary = groups.groupby("客户组").agg(
-        行数=("Invoice", "size"), 发票数=("Invoice", "nunique"), 净金额=("Amount", "sum"),
-        绝对金额和=("AbsAmount", "sum"), 平均每行金额=("Amount", "mean"))
-    summary["行数占比(%)"] = summary["行数"] / len(data) * 100
-    summary["净金额占比(%)"] = summary["净金额"] / data["Amount"].sum() * 100
-    summary["绝对金额占比(%)"] = summary["绝对金额和"] / data["AbsAmount"].sum() * 100
+def country_pies(countries, output):
+    """两组国家明细行占比分别绘制饼图，前五国家以外合并为 Other。"""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    figure, axes = plt.subplots(1, 2, figsize=(15, 5))
+    country_colors = {name: plt.get_cmap("tab20")(index % 20)
+                      for index, name in enumerate(countries.index)}
+    country_colors["Other"] = "#aaaaaa"
+    labels = ["Customer ID missing", "Customer ID present"]
+    for axis, (group, column), title in zip(axes, countries.items(), labels):
+        shares = column[column.gt(0)].sort_values(ascending=False)
+        top = shares.head(5).copy()
+        if len(shares) > 5:
+            top.loc["Other"] = shares.iloc[5:].sum()
+        wedges, _, _ = axis.pie(top, startangle=90, autopct=lambda v: f"{v:.2f}%" if v >= 5 else "", colors=[country_colors[name] for name in top.index])
+        axis.legend(wedges, [f"{name}: {value:.2f}%" for name, value in top.items()], loc="center left", bbox_to_anchor=(1, 0.5), frameon=False, fontsize=9)
+        axis.set_title(title)
+    figure.suptitle("Country distribution by transaction rows")
+    figure.tight_layout(rect=(0, 0, 1, 0.94))
+    output.mkdir(parents=True, exist_ok=True)
+    figure.savefig(output / "customer_country_distribution.png", dpi=160, bbox_inches="tight")
+    plt.close(figure)
+
+
+def q12_customers(data, output):
+    """步骤四：仅保留三项总体占比和三个群体对比表。"""
+    labels = ["Customer ID缺失", "Customer ID非缺失"]
+    groups = data.assign(客户组=np.where(missing_mask(data["Customer ID"]), labels[0], labels[1]))
+    totals = groups.groupby("客户组").agg(行数=("Invoice", "size"), 总金额=("AbsAmount", "sum"), 净金额=("Amount", "sum"))
+    summary = pd.DataFrame({
+        "总行数占比(%)": totals["行数"] / len(data) * 100,
+        "总金额占比(%)": totals["总金额"] / data["AbsAmount"].sum() * 100,
+        "净金额占比(%)": totals["净金额"] / data["Amount"].sum() * 100,
+    }).reindex(labels)
+    countries = pd.crosstab(groups["Country"], groups["客户组"]).reindex(columns=labels)
+    countries = countries.div(countries.sum(axis=0), axis=1) * 100
+    country_pies(countries, output)
     invoices = groups.groupby(["客户组", "Invoice"])["Amount"].sum()
-    summary["原始净额每发票均值"] = invoices.groupby(level=0).mean()
-    summary["原始净额每发票中位数"] = invoices.groupby(level=0).median()
-    mixed = groups.groupby("Invoice")["客户组"].nunique().gt(1).sum()
-    # 辅助观察口径，不生成清洗数据：纯数字发票、正数量、正价格。
-    sale_mask = groups["Invoice"].str.fullmatch(r"[0-9]+") & groups["Quantity"].gt(0) & groups["Price"].gt(0)
-    sale = groups.loc[sale_mask]
-    sale_invoices = sale.groupby(["客户组", "Invoice"])["Amount"].sum()
-    sales_summary = sale.groupby("客户组").agg(行数=("Invoice", "size"), 发票数=("Invoice", "nunique"), 正向金额=("Amount", "sum"))
-    sales_summary["正向每发票均值"] = sale_invoices.groupby(level=0).mean()
-    sales_summary["正向每发票中位数"] = sale_invoices.groupby(level=0).median()
-    countries = groups.groupby(["客户组", "Country"]).agg(行数=("Invoice", "size"), 净金额=("Amount", "sum")).reset_index()
-    countries["组内行数占比(%)"] = countries["行数"] / countries["客户组"].map(summary["行数"]) * 100
-    countries["组内净金额占比(%)"] = countries["净金额"] / countries["客户组"].map(summary["净金额"]) * 100
-    observations = []
-    for label in summary.index:
-        row = summary.loc[label]
-        uk = countries.loc[(countries["客户组"] == label) & countries["Country"].eq("United Kingdom"), "组内行数占比(%)"].sum()
-        observations.append(
-            f"{label}：行数占比 {row['行数占比(%)']:.4f}%，净金额占比 {row['净金额占比(%)']:.4f}%，"
-            f"英国记录占组内 {uk:.4f}%；正向每发票均值 {sales_summary.loc[label, '正向每发票均值']:.2f}、"
-            f"中位数 {sales_summary.loc[label, '正向每发票中位数']:.2f}。"
-        )
-    sections = ["## 4. Customer ID 缺失与非缺失群体比较", table(summary.reset_index()),
-                f"同一 Invoice 同时出现在两个群体的数量：{mixed}。若存在混合发票，按组得到的是发票片段，不能当成互斥订单。",
-                "**客单价口径**：匿名群体无法按客户聚合，因此使用每张发票金额的均值及中位数。原始净额口径保留取消、调整、费用和重复记录，"
-                "称为每发票净额，不能直接等同正常购物订单客单价。平均每行金额另列，不称为客单价。",
-                "### 正向交易观察口径", table(sales_summary.reset_index()),
-                "辅助口径仅选纯数字 Invoice、Quantity > 0、Price > 0，以比较正向每发票金额；这是分析视图，未删除原始行，"
-                "也未排除全部特殊代码、未匹配取消、未去重，所以不是最终真实销售指标。",
-                "### 国家分布（全部国家）", table(countries),
-                "### 高频商品 TOP 10（正向观察口径，按出现明细行数排名）",
-                "按 StockCode 汇总，不按描述拆分；相同次数按代码排序。排名未排除特殊代码，因此展示的是高频代码候选，描述用于人工区分商品与费用。"]
-    sections += ["### 数据支持的群体差异", *observations,
-                 "本次匿名组的正向每发票均值高于已识别组，中位数却低于已识别组，显示均值可能受到较大金额发票影响；"
-                 "匿名组英国集中度也更高。因此不能从较低的平均每行金额直接得出匿名客户客单价更低的结论。"]
-    for label, group in sale.groupby("客户组"):
-        top = group.groupby("StockCode").agg(
-            行数=("Invoice", "size"), 不同发票数=("Invoice", "nunique"),
-            数量合计=("Quantity", "sum"), 正向金额=("Amount", "sum"),
-            描述示例=("Description", lambda s: repr(s.drop_duplicates().head(3).tolist())),
-        ).reset_index().sort_values(["行数", "StockCode"], ascending=[False, True]).head(10)
-        sections += [f"#### {label}", table(top)]
-        conventional = group.loc[group["StockCode"].str.fullmatch(r"[0-9]+[A-Za-z]*")]
-        product_top = conventional.groupby("StockCode").agg(
-            行数=("Invoice", "size"), 不同发票数=("Invoice", "nunique"),
-            描述示例=("Description", lambda s: repr(s.drop_duplicates().head(3).tolist())),
-        ).reset_index().sort_values(["行数", "StockCode"], ascending=[False, True]).head(10)
-        sections += ["常规格式商品代码候选 TOP 10（辅助视图，可能遗漏特殊编码的真实商品）：", table(product_top)]
-    assert summary["行数"].sum() == len(data)
-    assert np.isclose(summary["净金额"].sum(), data["Amount"].sum())
-    sections += ["**本次高频差异**：匿名组原始代码排名首位为 DOT（DOTCOM POSTAGE），提示其可能包含线上渠道相关的匿名记录；"
-                 "常规商品候选中匿名组以 85099B 为首，已识别组以 85123A 为首，且两组都出现 22423、85099B、21212、47566 等代码，商品偏好存在重叠。",
-                 "**群体解释边界**：比较上表的组内国家占比、正向每发票均值/中位数和高频代码，才能判断群体差异。"
-                 "匿名记录可能来自未登记客户、特定渠道或历史系统缺录；这只是候选解释。CSV 缺少渠道、注册状态及缺失原因字段，"
-                 "不能把缺失 ID 直接解释为游客、散客或低价值客户。应保留其对交易金额的贡献，但不伪造客户 ID 进行 RFM。",
-                 "支持代码：`q12_customers()`；使用 `missing_mask`、按客户组/Invoice 聚合金额、按组/Country 统计及按组/StockCode 排名。"]
-    return sections
+    average = invoices.groupby(level=0).mean().reindex(labels).rename("客单价（原始净额发票均值）").reset_index()
+    tops = []
+    for label in labels:
+        subset = groups.loc[groups["客户组"].eq(label)]
+        top = subset.groupby("StockCode").agg(行数=("Invoice", "size"), 描述=("Description", lambda x: repr(x.drop_duplicates().head(2).tolist()))).reset_index().sort_values(["行数", "StockCode"], ascending=[False, True]).head(10).reset_index(drop=True)
+        top.columns = [f"{label}-{c}" for c in top.columns]
+        tops.append(top)
+    comparison = pd.concat(tops, axis=1)
+    comparison.insert(0, "排名", range(1, len(comparison) + 1))
+    assert totals["行数"].sum() == len(data)
+    assert np.isclose(totals["净金额"].sum(), data["Amount"].sum())
+    assert np.allclose(summary.sum(), 100)
+    return ["## 4. Customer ID 缺失与非缺失对比",
+            "### 总体占比", table(summary.reset_index()),
+            "总金额定义为逐行 |Quantity × Price| 的合计，表示抵消前金额规模；净金额为带符号 Quantity × Price 合计。两种金额占比均以全表同口径金额为分母。保留取消、财务调整及重复记录。",
+            "### 表1：国家分布占比（组内明细行占比，%）", table(countries.reset_index()),
+            "![国家分布占比对比](customer_country_distribution.png)",
+            "饼图分别展示两组前五国家，其余合并为 Other；完整国家比例见上表。",
+            "### 表2：客单价对比", table(average),
+            "客单价 = 每组原始净金额 / 每组不同 Invoice 数。包含取消及调整发票，是原始净额发票均值，不是按客户计算的均值。",
+            "### 表3：高频商品/代码 TOP 10 对比", table(comparison),
+            "使用全部原始行，按 StockCode 出现明细行数排名，不筛选正向交易、不去重。保留邮费等非商品代码供对照，不将其误称为商品；相同频次按代码排序。",
+            "**解读**：匿名组英国集中度更高；原始净额发票均值低于非缺失组。高频代码及描述显示商品与渠道相关记录的差异，但不能只凭ID缺失判断是散客或低价值客户。匿名记录可能与未登记客户、线上渠道或历史缺录有关，仍需渠道信息确认。",
+            "支持代码：`q12_customers()`、`country_pies()`，使用 groupby、crosstab 与按组发票金额均值计算。"]
 
 
 def write_q12(raw, typed, output):
@@ -392,13 +358,14 @@ def write_q12(raw, typed, output):
                 f"全表 {len(data):,} 行；带符号净金额合计 {data['Amount'].sum():,.6f}；逐行金额绝对值合计 {data['AbsAmount'].sum():,.6f}。",
                 "净金额占比 = 子集带符号金额 / 全表带符号金额；负占比表示净扣减。另列绝对金额占比用于观察抵消前规模，"
                 "其分子是逐行绝对值之和，不是子集净额的绝对值。比例不能视为已清洗的销售额贡献。"]
-    for analyze in (q12_invoice, q12_stock, q12_extremes, q12_customers):
+    for analyze in (q12_invoice, q12_stock, q12_extremes):
         sections.extend(analyze(data))
+    sections.extend(q12_customers(data, output))
     sections += ["## 复现方式与代码定位",
                  "```bash\nconda activate gekko-de\npython q1_data_quality/q1_code.py --only-q12\n```",
                  "不加 --only-q12 时重现 Q1.1 和 Q1.2。支持代码在同目录 q1_code.py 中，函数名称与上述四步一一对应；不调用 df.describe()。",
                  "### 核心支持代码（data 是原始数据的分析副本）",
-                 "```python\n# 1. 非纯数字发票和前缀\nunusual = data.loc[~data['Invoice'].str.fullmatch(r'[0-9]+')].copy()\nunusual['prefix'] = unusual['Invoice'].str.extract(r'^([^0-9]+)', expand=False).fillna('无前导非数字字符')\nprint(unusual.groupby('prefix')['Invoice'].agg(['size', 'nunique']))\n\n# 2. 不符合常规格式的商品代码与金额占比\nmask = ~data['StockCode'].str.fullmatch(r'[0-9]+[A-Za-z]*')\nprint(data.loc[mask].groupby('StockCode')['Amount'].agg(['size', 'sum']))\nprint(data.loc[mask, 'Amount'].sum() / data['Amount'].sum())\n\n# 3. 数量极值、负价格记录\nprint(data.loc[data['Quantity'].isin([80995, -80995])])\nprint(data.loc[data['Price'].lt(0)])\n\n# 4. 客户缺失占比、每发票净额\nmissing = missing_mask(data['Customer ID'])\nprint(missing.mean(), data.loc[missing, 'Amount'].sum() / data['Amount'].sum())\nprint(data.assign(missing=missing).groupby(['missing', 'Invoice'])['Amount'].sum().groupby(level=0).agg(['mean', 'median']))\n```",
+                 "```python\n# 1. 非纯数字发票和前缀\nunusual = data.loc[~data['Invoice'].str.fullmatch(r'[0-9]+')].copy()\nunusual['prefix'] = unusual['Invoice'].str.extract(r'^([^0-9]+)', expand=False).fillna('无前导非数字字符')\nprint(unusual.groupby('prefix')['Invoice'].agg(['size', 'nunique']))\n\n# 2. 不符合常规格式的商品代码与金额占比\nmask = stock_selection(data)\nprint(data.loc[mask].groupby('StockCode')['Amount'].agg(['size', 'sum']))\nprint(data.loc[mask, 'Amount'].sum() / data['Amount'].sum())\n\n# 3. 数量极值、负价格记录\nprint(data.loc[data['Quantity'].isin([80995, -80995])])\nprint(data.loc[data['Price'].lt(0)])\n\n# 4. 客户缺失占比、每发票净额\nmissing = missing_mask(data['Customer ID'])\nprint(missing.mean(), data.loc[missing, 'Amount'].sum() / data['Amount'].sum())\nprint(data.assign(missing=missing).groupby(['missing', 'Invoice'])['Amount'].sum().groupby(level=0).mean())\n```",
                  "业务含义为结合当前描述与数值的推断，不是来源系统已验证的标签。输入数据变化后，应重新审阅文字解读。"]
     output.mkdir(parents=True, exist_ok=True)
     report = output / "findings.md"
