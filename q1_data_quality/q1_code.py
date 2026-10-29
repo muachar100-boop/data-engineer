@@ -16,6 +16,11 @@ FIELD_MAP = {
     "InvoiceDate": "InvoiceDate", "UnitPrice": "Price",
     "CustomerID / Customer ID": "Customer ID", "Country": "Country",
 }
+DTYPES = {
+    "Invoice": str, "StockCode": str, "Description": str,
+    "Quantity": "int64", "InvoiceDate": str, "Price": "float64",
+    "Customer ID": str, "Country": str,
+}
 
 
 def table(frame: pd.DataFrame) -> str:
@@ -30,15 +35,15 @@ def table(frame: pd.DataFrame) -> str:
 
 
 def load_data(path: Path):
-    """同时保留原始文本视图和 pandas 自动推断类型视图。"""
+    """保留原始文本视图，另按指定类型读取分析视图。"""
     with path.open(encoding="utf-8-sig", newline="") as handle:
         header = next(csv.reader(handle))
     if len(header) != len(set(header)):
         raise ValueError(f"CSV 存在重复列名，请先人工检查：{header}")
     # 禁止默认把 NA、NULL 等文本静默视作缺失；空字段单独统计。
     raw = pd.read_csv(path, dtype="string", keep_default_na=False)
-    inferred = pd.read_csv(path, low_memory=False)
-    return raw, inferred
+    typed = pd.read_csv(path, dtype=DTYPES, keep_default_na=False)
+    return raw, typed
 
 
 def missing_mask(series: pd.Series) -> pd.Series:
@@ -46,7 +51,7 @@ def missing_mask(series: pd.Series) -> pd.Series:
     return series.str.strip().eq("")
 
 
-def profile_columns(raw, inferred):
+def profile_columns(raw, typed):
     rows = []
     for name in raw.columns:
         series = raw[name]
@@ -54,12 +59,11 @@ def profile_columns(raw, inferred):
         observed = series[~missing]
         repeated = int(observed.duplicated().sum())
         rows.append({
-            "列名": name, "pandas推断dtype": str(inferred[name].dtype),
+            "列名": name, "指定类型dtype": str(typed[name].dtype),
             "原始文本dtype": str(series.dtype),
             "空字段数": int(series.eq("").sum()),
             "仅空白数": int((series.ne("") & missing).sum()),
             "缺失比例(%)": round(missing.mean() * 100, 6),
-            "pandas默认NA数": int(inferred[name].isna().sum()),
             "非缺失唯一值数": observed.nunique(),
             "非缺失重复多余行数": repeated,
             "非缺失重复比例(%)": round(repeated / len(observed) * 100, 6) if len(observed) else None,
@@ -68,9 +72,9 @@ def profile_columns(raw, inferred):
 
 
 def numeric_checks(raw):
-    """ID 单独验证可解析性；只对业务数值 Quantity、Price 计算分布。"""
+    """仅检查 Quantity、Price 的数值可解析性、分布和取值。"""
     summaries, checks = [], []
-    for name in ("Quantity", "Price", "Customer ID"):
+    for name in ("Quantity", "Price"):
         series = raw[name]
         missing = missing_mask(series)
         parsed = pd.to_numeric(series.mask(missing), errors="coerce")
@@ -82,9 +86,9 @@ def numeric_checks(raw):
             "负值（仅标记，业务含义待分析）": finite & parsed.lt(0),
             "零值（仅标记）": finite & parsed.eq(0),
         }
-        if name in ("Quantity", "Customer ID"):
+        if name == "Quantity":
             masks["非整数值"] = finite & parsed.mod(1).ne(0)
-        if name != "Customer ID":
+        if name in ("Quantity", "Price"):
             q1, q3 = values.quantile([0.25, 0.75])
             iqr = q3 - q1
             masks["超出1.5倍IQR（统计提示，非错误判定）"] = finite & (
@@ -147,7 +151,7 @@ def date_profile(raw):
 def main(input_path=None, output_dir=None):
     source = Path(input_path) if input_path else ROOT / "data/online_retail_ii.csv"
     output = Path(output_dir) if output_dir else Path(__file__).resolve().parent
-    raw, inferred = load_data(source)
+    raw, typed = load_data(source)
     if raw.empty:
         raise ValueError("输入文件没有数据行，无法生成分布报告")
     absent = set(FIELD_MAP.values()) - set(raw.columns)
@@ -159,9 +163,10 @@ def main(input_path=None, output_dir=None):
                 table(pd.DataFrame(FIELD_MAP.items(), columns=["题目业务名称", "实际字段名"])),
                 f"全部实际列名：`{raw.columns.tolist()}`。保留原始名称，不做重命名。",
                 "## 2. 前五行（原始文本）", table(raw.head(5)),
-                "## 3. 类型、缺失和单列重复", table(profile_columns(raw, inferred)),
-                "缺失定义：空字段或仅空白字符。默认 NA 识别结果另列对照，NA/NULL 等字面文本不自动判为缺失。"
-                "单列重复比例分母为该列非缺失行数；重复不等于数据错误。ID 即使被推断为数值，也按标识符理解。"]
+                "## 3. 类型、缺失和单列重复", table(profile_columns(raw, typed)),
+                "按指定类型读取：Quantity 为 int64，Price 为 float64，其余列为 str；InvoiceDate 只在时间统计的派生视图中解析为日期。"
+                "缺失定义：空字段或仅空白字符，保留原值；NA/NULL 等字面文本不自动判为缺失。"
+                "单列重复比例分母为该列非缺失行数；重复不等于数据错误。Customer ID 按字符串标识符处理。"]
     numeric, checks = numeric_checks(raw)
     sections += ["## 4. 数值分布", table(numeric),
                  "统计排除缺失、无法解析及非有限值，原表不变。std 使用样本标准差（ddof=1）。Customer ID 是标识符，不计算金额式分布。",
