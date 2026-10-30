@@ -11,7 +11,7 @@
 | Description | string | string | 4382 |
 | Quantity | string | float64 | 0 |
 | Price | string | float64 | 0 |
-| InvoiceDate | string | datetime64[us] | 0 |
+| InvoiceDate | string | datetime64[ns] | 0 |
 | Customer ID | string | string | 243007 |
 | Country | string | string | 0 |
 
@@ -19,13 +19,14 @@
 
 ## 清洗规则及业务权衡
 
-- 正向销售：纯数字发票、已识别商品、数量和单价大于0、核心字段有效。保留匿名客户和统计极值。金额是数量×价格，不代表已支付或最终净收入。
+- 正向销售：纯数字发票、已识别商品、数量和单价大于0、核心字段有效。基础销售保留匿名客户和极端交易，BI 视图单独排除极端交易。金额是数量×价格，不代表已支付或最终净收入。
 - 取消记录：所有 C 发票独立保留，包括重复、匿名、费用及正数量例外；本阶段不匹配、不取绝对值、不扣减正单。不能将每条 C 行直接解释成实物退货。
 - A 发票、B 代码及 Adjust bad debt 单列坏账。费用、折扣、手工调整、礼券、样品、测试不混入商品销售；礼券可能涉及递延收入，不能当实物商品收入。
 - 非C负数量包含库存盘点、损坏等线索，隔离待核查，不凭负号认定退货。零价可能为赠品、库存调整或缺价，保留审计但不进付费销售。负价格不取绝对值。
-- 整行重复不等于重复导入：缺少可靠明细键，默认保留并标记，另给去重敏感性。此决定可能高估销售，需来源系统确认后再定稿。不会按 Invoice+StockCode 粗暴去重。
+- 整行重复不等于重复导入：缺少可靠明细键，按当前决定暂时保留并标记，另给去重敏感性，不执行去重。不会按 Invoice+StockCode 粗暴去重。
 - 代码格式不能替代业务含义：PADS、DCGSSBOY/GIRL 和有商品描述证据的 DCGS/SP 代码作为商品例外；未知代码隔离。新代码需补充证据后再纳入。
-- 极端数量与价格仅标记，不截尾、不缩尾；80995 和74215 均有随后反向冲销证据，不能仅删负行，也不能未经确认认定正单录错。后续净销售需结合退货匹配解释。
+- 极端交易定义为 |Quantity| ≥ 70000（本次证据中的74215和80995）；仅从 BI 销售视图删除。原始、分类、基础销售、RFM候选及取消表保留，供后续匹配或其他用途。IQR 数量与价格标记仅供提示，不据此批量删除。
+- RFM 销售截止时间取原始 CSV 物理最后一行的 InvoiceDate，包含该时刻；不取系统日期、不加一天。候选限定为截至该时间的有客户正向销售，保留重复和极端交易。当前仅提供截止时间与候选，尚不计算 R/F/M。
 - 匿名记录用于 BI，不补造客户，不参与 RFM。Q1 曾建议退款后净 RFM；Q3 明确要求基于正向真实销售，应先遵守题目，净 RFM 可另作扩展，不能静默改口径。
 - 退货匹配后续需处理时间先后、重复候选、缺客户、部分/多次退货和数量占用；不得将未知客户互相匹配。当前保留全部候选和来源行号。
 
@@ -50,6 +51,13 @@
 | 核心字段无效 | 0 |
 | 正向销售行数 | 1037009 |
 | 正向销售金额 | 20110037.467 |
+| BI销售行数 | 1037007 |
+| BI销售金额 | 19864384.267 |
+| BI排除极端销售行数 | 2 |
+| BI排除极端销售金额 | 245653.2 |
+| RFM截止时间（原始末行） | 2011-12-09 12:50:00 |
+| 原始最大时间（供比较） | 2011-12-09 12:50:00 |
+| 截至末行时间的有客户销售行数 | 802651 |
 | 销售中匿名行数 | 234358 |
 | 销售中匿名金额 | 2675572.72 |
 | 有客户销售行数（后续RFM候选） | 802651 |
@@ -58,7 +66,7 @@
 | 若去重销售行数 | 1003345 |
 | 若去重销售金额 | 19643718.087 |
 | 去重销售金额减少 | 466319.38 |
-| 实际运行秒数（报告写入前） | 2.285168 |
+| 实际运行秒数（报告写入前） | 4.531229 |
 
 ## 互斥记录分类（按取消→坏账→无效→未知→非商品→数量价格顺序）
 
@@ -140,6 +148,53 @@
 | TEST001 | test | 15 | 202.5 |
 | TEST002 | test | 2 | 1 |
 
+## unknown_stock 与 PADS 待判断清单
+
+StockCode 和 Description 保留标准化后的原值；缺失显示为 <NA>，按描述及分类分别统计。PADS 暂沿用商品例外，unknown_stock 暂隔离，等待业务判断。
+
+| StockCode | Description | record_class | rows | amount |
+| --- | --- | --- | --- | --- |
+| C3 | <NA> | unknown_stock | 1 | 0 |
+| DCGS0006 | <NA> | unknown_stock | 1 | 0 |
+| DCGS0016 | <NA> | unknown_stock | 1 | 0 |
+| DCGS0027 | <NA> | unknown_stock | 1 | 0 |
+| DCGS0036 | <NA> | unknown_stock | 1 | 0 |
+| DCGS0039 | <NA> | unknown_stock | 1 | 0 |
+| DCGS0053 | <NA> | unknown_stock | 1 | 0 |
+| DCGS0055 | <NA> | unknown_stock | 1 | 0 |
+| DCGS0056 | <NA> | unknown_stock | 1 | 0 |
+| DCGS0057 | <NA> | unknown_stock | 1 | 0 |
+| DCGS0059 | <NA> | unknown_stock | 1 | 0 |
+| DCGS0060 | <NA> | unknown_stock | 1 | 0 |
+| DCGS0066P | <NA> | unknown_stock | 1 | 0 |
+| DCGS0067 | ebay | unknown_stock | 1 | 0 |
+| DCGS0068 | DOGS NIGHT COLLAR | unknown_stock | 2 | 17.12 |
+| DCGS0068 | ebay | unknown_stock | 1 | 0 |
+| DCGS0069 | OOH LA LA DOGS COLLAR | unknown_stock | 5 | 80.31 |
+| DCGS0069 | ebay | unknown_stock | 1 | 0 |
+| DCGS0070 | CAMOUFLAGE DOG COLLAR | unknown_stock | 2 | 25.44 |
+| DCGS0070 | <NA> | unknown_stock | 1 | 0 |
+| DCGS0071 | <NA> | unknown_stock | 1 | 0 |
+| DCGS0072 | CAT CAMOUFLAGUE COLLAR | unknown_stock | 3 | 20.68 |
+| DCGS0072 | <NA> | unknown_stock | 1 | 0 |
+| DCGS0073 | ebay | unknown_stock | 1 | 0 |
+| DCGS0074 | <NA> | unknown_stock | 1 | 0 |
+| DCGSLBOY | <NA> | unknown_stock | 1 | 0 |
+| DCGSLGIRL | <NA> | unknown_stock | 1 | 0 |
+| GIFT | <NA> | unknown_stock | 1 | 0 |
+| PADS | PADS TO MATCH ALL CUSHIONS | cancellation | 1 | -36.6 |
+| PADS | PADS TO MATCH ALL CUSHIONS | real_sale | 17 | 0.017 |
+| PADS | PADS TO MATCH ALL CUSHIONS | zero_price | 1 | 0 |
+
+## C 发票正数量核查
+
+| source_row | invoice_no | stock_code | description | quantity | unit_price | invoice_datetime | customer_id | country | record_class |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 76800 | C496350 | M | Manual | 1 | 373.57 | 2010-02-01 08:24:00 | <NA> | United Kingdom | cancellation |
+
+C 前缀与正数量存在符号冲突，单列待核查；保留原始符号及取消分类，不进入正向销售、BI 或 RFM 候选，也不直接作为负数量退货匹配。仅凭原表不能判定其实际业务原因。
+
+
 ## 极端数量证据（保留原符号）
 
 | source_row | invoice_no | stock_code | description | quantity | unit_price | invoice_datetime | customer_id | country | record_class |
@@ -151,4 +206,4 @@
 
 ## 待确认与边界
 
-尚未确认重复来源、极端交易是否录错、零价格含义及未知代码。销售筛选是可复现的业务规则，不是逐单履约证明。退货匹配前正单含后来取消的购买，因此当前金额不能作为净销售。RFM、returns_log、三个 Parquet 及 run_all 接入均未实现。本阶段速度不代表完整 Pipeline 的速度。
+重复暂时保留；极端交易仅从 BI 排除，其是否录错仍待确认。零价格、未知代码、PADS及C发票正数量的业务含义待确认。销售筛选是可复现的业务规则，不是逐单履约证明。退货匹配前正单含后来取消的购买，因此当前金额不能作为净销售。RFM、returns_log、三个 Parquet 及 run_all 接入均未实现。本阶段速度不代表完整 Pipeline 的速度。
