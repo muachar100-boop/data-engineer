@@ -235,7 +235,7 @@ def stock_selection(data):
     codes = data["StockCode"]
     conventional = codes.str.fullmatch(r"[0-9]+[A-Za-z]*")
     mixed = codes.str.fullmatch(r"[A-Za-z0-9]+") & codes.str.contains(r"[A-Za-z]") & codes.str.contains(r"[0-9]")
-    return (~conventional & ~mixed) | codes.isin(["C3", "C2", "ADJUST2", "TEST001", "TEST002"])
+    return ((~conventional & ~mixed) | codes.isin(["C3", "C2", "ADJUST2", "TEST001", "TEST002"])) & ~codes.isin(["47503J ", "47503Jz"])
 
 
 def q12_stock(data):
@@ -254,7 +254,7 @@ def q12_stock(data):
         "净金额占比(%)": selected["Amount"].sum() / data["Amount"].sum() * 100}])
     assert summary["行数"].sum() == len(selected)
     return ["## 2. StockCode 代码与业务解释",
-            "展示集合去掉纯数字、数字后接字母，以及仅由字母和数字组成的混合代码；保留纯字母、下划线、空格等特殊格式。C3、C2、ADJUST2、TEST001、TEST002 按人工指定名单作为例外保留。过滤只影响分析展示，不删除原始记录。整体占比已按当前展示集合重算，分母仍为全表。",
+            "展示集合去掉纯数字、数字后接字母，以及仅由字母和数字组成的混合代码；保留纯字母、下划线、空格等特殊格式。C3、C2、ADJUST2、TEST001、TEST002 按人工指定名单作为例外保留。另按人工要求移除末尾含空格的园艺工具代码。过滤只影响分析展示，不删除原始记录。整体占比已按当前展示集合重算，分母仍为全表。",
             table(overall), table(summary),
             "表中“缺失值”指 Description 缺失，不是 StockCode 缺失。“记录出错”属于人工待核查判断，尚未依据该标签删除记录。PADS、DCGSSBOY、DCGSSGIRL 按商品解释；gift_0001_数字按礼物券解释，其中60、90单列为缺失描述记录。",
             "支持代码：`stock_selection()`、`q12_stock()`、`code_meaning()`。"]
@@ -339,7 +339,9 @@ def q12_customers(data, output):
             "客单价 = 每组原始净金额 / 每组不同 Invoice 数。包含取消及调整发票，是原始净额发票均值，不是按客户计算的均值。",
             "### 表3：高频商品/代码 TOP 10 对比", table(comparison),
             "使用全部原始行，按 StockCode 出现明细行数排名，不筛选正向交易、不去重。保留邮费等非商品代码供对照，不将其误称为商品；相同频次按代码排序。",
-            "**解读**：匿名组英国集中度更高；原始净额发票均值低于非缺失组。高频代码及描述显示商品与渠道相关记录的差异，但不能只凭ID缺失判断是散客或低价值客户。匿名记录可能与未登记客户、线上渠道或历史缺录有关，仍需渠道信息确认。",
+            "从国家分布来看，Customer ID缺失记录高度集中在英国（98.77%），明显高于非缺失群体。同时，缺失群体的平均每发票净额相对较低。",
+            "从高频商品来看，缺失群体中DOT（DOTCOM POSTAGE）出现次数最多，说明该群体包含较多与电商运费相关的记录。但两组高频实物商品存在较大重合，暂未发现明显不同的商品购买偏好。",
+            "因此综合下来我推测，Customer ID 缺失记录可能主要来自英国本地未登记或临时客户、电商交易中未关联客户信息的订单，以及部分非商品交易记录。不过仍需要进行进一步验证。",
             "支持代码：`q12_customers()`、`country_pies()`，使用 groupby、crosstab 与按组发票金额均值计算。"]
 
 
