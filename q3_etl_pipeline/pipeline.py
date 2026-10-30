@@ -272,6 +272,7 @@ class PipelineResult:
     customer_features: pd.DataFrame
     returns_log: pd.DataFrame
     elapsed_seconds: float = 0.0
+    price_review: dict | None = None
 
 
 @stage
@@ -281,14 +282,16 @@ def build_sales_facts(cleaning: CleaningResult) -> pd.DataFrame:
 
 
 @stage
-def match_returns(classified: pd.DataFrame, sales: pd.DataFrame) -> pd.DataFrame:
+def match_returns(classified: pd.DataFrame, sales: pd.DataFrame, require_same_price: bool = True) -> pd.DataFrame:
     """只对C记录匹配，销售端不做全量笛卡尔连接。
 
     以客户+商品建立索引，仅循环约两万条取消记录（不循环百万销售行）。
     顺序：退款时间、来源行；候选：历史时间倒序，同时间来源行最小优先。
-    先找原始数量相等且余量足够的最近销售，再找余量足够的部分退货。
+    先要求同价（仅容忍1e-9浮点误差，不按分舍入），再按等量优先、最近选择。
+    require_same_price=False仅用于复算旧规则审计，不用于正式输出或RFM。
     不跨多条销售拆分；原单不足时保留未匹配，禁止过量退款。
     """
+    LOGGER.info('匹配模式：%s', '正式同价规则' if require_same_price else '旧规则复算，仅作价格差异审计')
     returns = classified.loc[classified.is_cancellation].sort_values(
         ['invoice_datetime', 'source_row'], kind='stable', na_position='last').copy()
     returns = returns.reset_index(drop=True)
@@ -342,6 +345,14 @@ def match_returns(classified: pd.DataFrame, sales: pd.DataFrame) -> pd.DataFrame
                 continue
             needed = -qty
             available = history[remaining[history] >= needed]
+            if not len(available):
+                statuses[i] = 'insufficient_remaining_quantity'
+                continue
+            if require_same_price:
+                available = available[np.isclose(prices[available], price, atol=1e-9, rtol=0)]
+                if not len(available):
+                    statuses[i] = 'no_same_price_sale'
+                    continue
             exact = available[quantities[available] == needed]
             pool = exact if len(exact) else available
             if not len(pool):
@@ -379,54 +390,68 @@ def match_returns(classified: pd.DataFrame, sales: pd.DataFrame) -> pd.DataFrame
 
 @stage
 def compute_rfm(sales: pd.DataFrame, returns: pd.DataFrame, reference_date) -> pd.DataFrame:
-    """题目字段为正向销售RFM，net_*为按已匹配退款调整后的独立口径。"""
+    """正式RFM基于全部有客户的正向真实销售；退款仅作独立审计，不改变RFM。"""
     known = sales.loc[sales.customer_id.notna()].copy()
-    features = known.groupby('customer_id', sort=True).agg(
-        frequency=('invoice_no', 'nunique'), monetary=('total_amount', 'sum'),
-        first_purchase_date=('invoice_datetime', 'min'), last_purchase_date=('invoice_datetime', 'max'),
-        unique_products=('stock_code', 'nunique'), gross_quantity=('quantity', 'sum'),
-        duplicate_sales_rows=('duplicate_extra', 'sum'),
-        extreme_sales_rows=('extreme_quantity_review', 'sum'))
-    features['recency_days'] = (pd.Timestamp(reference_date).normalize() - features.last_purchase_date.dt.normalize()).dt.days
-    # 主要国家按独立发票数，平手按国家名称升序；不把缺失补为某国家。
-    countries = known.dropna(subset=['country']).groupby(['customer_id', 'country']).invoice_no.nunique().rename('orders').reset_index()
-    countries = countries.sort_values(['customer_id', 'orders', 'country'], ascending=[True, False, True], kind='stable')
-    features['country'] = countries.drop_duplicates('customer_id').set_index('customer_id').country
-    features['country_count'] = known.groupby('customer_id').country.nunique()
-    features['is_one_time_buyer'] = features.frequency.eq(1)
     matched = returns.loc[returns.match_status.eq('matched')]
-    refunds = matched.assign(refund_amount=-matched.total_amount, returned_quantity=-matched.quantity).groupby('customer_id').agg(
-        matched_refund_amount=('refund_amount', 'sum'), returned_quantity=('returned_quantity', 'sum'),
-        return_count=('invoice_no', 'nunique'), ambiguous_return_rows=('candidate_count', lambda x: x.gt(1).sum()),
-        price_mismatch_rows=('price_mismatch', 'sum'))
+    usage = matched.assign(returned_quantity=-matched.quantity).groupby('matched_source_row').returned_quantity.sum()
+    known['remaining_quantity'] = known.quantity - known.source_row.map(usage).fillna(0)
+    effective = known.copy()  # 正向口径包含之后全退或部分退货的原销售
+    features = effective.groupby('customer_id', sort=True).agg(
+        frequency=('invoice_no', 'nunique'), first_purchase_date=('invoice_datetime', 'min'),
+        last_purchase_date=('invoice_datetime', 'max'), unique_products=('stock_code', 'nunique'),
+        remaining_quantity=('remaining_quantity', 'sum'))
+    gross = known.groupby('customer_id').agg(
+        gross_frequency=('invoice_no', 'nunique'), gross_monetary=('total_amount', 'sum'),
+        gross_first_purchase_date=('invoice_datetime', 'min'), gross_last_purchase_date=('invoice_datetime', 'max'),
+        gross_unique_products=('stock_code', 'nunique'), duplicate_sales_rows=('duplicate_extra', 'sum'),
+        extreme_sales_rows=('extreme_quantity_review', 'sum'))
+    features = features.join(gross)
+    refunds = matched.assign(refund_amount=-matched.total_amount).groupby('customer_id').agg(
+        matched_refund_amount=('refund_amount', 'sum'), return_count=('invoice_no', 'nunique'),
+        ambiguous_return_rows=('candidate_count', lambda x: x.gt(1).sum()))
     features = features.join(refunds)
     for col in refunds.columns:
         features[col] = features[col].fillna(0)
-    un = returns.loc[returns.match_status.ne('matched') & returns.quantity.lt(0) & returns.stock_type.eq('product') & ~returns.excluded_from_analysis]
+    features['monetary'] = features.gross_monetary
+    features['net_monetary'] = features.monetary - features.matched_refund_amount
+    features['fully_returned'] = features.remaining_quantity.eq(0)
+    features['recency_days'] = (pd.Timestamp(reference_date).normalize() - features.last_purchase_date.dt.normalize()).dt.days
+    countries = effective.dropna(subset=['country']).groupby(['customer_id', 'country']).invoice_no.nunique().rename('orders').reset_index()
+    countries = countries.sort_values(['customer_id', 'orders', 'country'], ascending=[True, False, True], kind='stable')
+    features['country'] = countries.drop_duplicates('customer_id').set_index('customer_id').country
+    features['country_count'] = effective.groupby('customer_id').country.nunique()
+    features['is_one_time_buyer'] = features.frequency.eq(1)
+    un = returns.loc[returns.match_status.ne('matched') & returns.quantity.lt(0)
+        & returns.unit_price.gt(0) & returns.stock_type.eq('product') & ~returns.excluded_from_analysis]
     unmatched = un.assign(refund_amount=-un.total_amount).groupby('customer_id').agg(
         unmatched_refund_amount=('refund_amount', 'sum'), unmatched_return_rows=('source_row', 'size'))
     features = features.join(unmatched)
     features[['unmatched_refund_amount', 'unmatched_return_rows']] = features[['unmatched_refund_amount', 'unmatched_return_rows']].fillna(0)
-    usage = matched.assign(returned_quantity=-matched.quantity).groupby('matched_source_row').returned_quantity.sum()
-    known['remaining_quantity'] = known.quantity - known.source_row.map(usage).fillna(0)
-    effective = known.loc[known.remaining_quantity.gt(0)]
-    net = effective.groupby('customer_id').agg(
-        net_frequency=('invoice_no', 'nunique'), net_unique_products=('stock_code', 'nunique'),
-        net_first_purchase_date=('invoice_datetime', 'min'), net_last_purchase_date=('invoice_datetime', 'max'))
-    features = features.join(net)
-    for col in ['net_frequency', 'net_unique_products']:
-        features[col] = features[col].fillna(0).astype('int64')
-    features['net_monetary'] = features.monetary - features.matched_refund_amount
-    features['net_recency_days'] = (pd.Timestamp(reference_date).normalize() - features.net_last_purchase_date.dt.normalize()).dt.days.astype('Int64')
-    features['net_eligible'] = features.net_frequency.gt(0)
-    features['net_is_one_time_buyer'] = features.net_frequency.eq(1)
-    features['has_anomaly'] = (features.duplicate_sales_rows.gt(0) | features.extreme_sales_rows.gt(0)
-        | features.ambiguous_return_rows.gt(0) | features.price_mismatch_rows.gt(0)
-        | features.unmatched_return_rows.gt(0) | features.country_count.gt(1) | features.net_monetary.lt(0))
+    # 大额已由用户确认真实，保留统计标记，但不因此将客户判为异常。
+    features['has_anomaly'] = (features.duplicate_sales_rows.gt(0) | features.ambiguous_return_rows.gt(0)
+        | features.unmatched_return_rows.gt(0) | features.country_count.gt(1))
+    for col in ['return_count', 'ambiguous_return_rows', 'unmatched_return_rows']:
+        features[col] = features[col].astype('int64')
+    features = features.reset_index()
     required = ['customer_id', 'recency_days', 'frequency', 'monetary', 'first_purchase_date',
                 'last_purchase_date', 'unique_products', 'country', 'is_one_time_buyer']
-    features = features.reset_index()
     return features[required + [c for c in features.columns if c not in required]]
+
+
+@stage
+def audit_price_changes(previous: pd.DataFrame, current: pd.DataFrame) -> dict:
+    """复核旧规则价格不同的全部记录，新旧匹配各自独立计算数量占用。"""
+    old = previous.loc[previous.price_mismatch, ['source_row', 'matched_source_row']]
+    checked = old.merge(current[['source_row', 'matched_source_row', 'match_status']],
+        on='source_row', suffixes=('_old', '_new'), validate='one_to_one')
+    alternatives = checked.match_status.eq('matched')
+    assert checked.loc[alternatives, 'matched_source_row_old'].ne(checked.loc[alternatives, 'matched_source_row_new']).all()
+    stats = {'previous_price_mismatch': len(old), 'alternative_matched': int(alternatives.sum()),
+             'now_null': int((~alternatives).sum())}
+    for row in checked.itertuples(index=False, name=None):
+        LOGGER.debug('旧价格差异复核 source_row=%s old_sale=%s new_sale=%s status=%s', *row)
+    LOGGER.info('旧价格差异记录复核：%s', stats)
+    return stats
 
 
 @stage
@@ -442,17 +467,25 @@ def validate_datasets(result: PipelineResult):
         assert pd.api.types.is_datetime64_any_dtype(df.invoice_datetime)
         assert pd.api.types.is_float_dtype(df.total_amount)
     assert features.customer_id.is_unique and features.customer_id.notna().all()
-    assert len(features) == sales.customer_id.nunique()
+    matched = returns.loc[returns.match_status.eq('matched')]
+    known = sales.loc[sales.customer_id.notna()].copy()
+    used = matched.assign(used=-matched.quantity).groupby('matched_source_row').used.sum()
+    known['remaining'] = known.quantity - known.source_row.map(used).fillna(0)
+    effective = known  # 正式RFM不按剩余数量筛除购买
+    assert set(features.customer_id) == set(effective.customer_id)
     assert features.recency_days.ge(0).all() and features.frequency.ge(1).all()
     assert features.monetary.gt(0).all() and features.unique_products.ge(1).all()
     assert features.is_one_time_buyer.equals(features.frequency.eq(1))
     assert pd.api.types.is_bool_dtype(features.is_one_time_buyer)
-    assert features.net_recency_days.dropna().ge(0).all()
-    assert features.net_frequency.le(features.frequency).all()
-    assert features.net_unique_products.le(features.unique_products).all()
-    assert features.loc[~features.net_eligible, 'net_last_purchase_date'].isna().all()
-    assert np.isclose(features.monetary.sum(), sales.loc[sales.customer_id.notna(), 'total_amount'].sum(), atol=1e-6, rtol=0)
-    assert np.allclose(features.net_monetary, features.monetary - features.matched_refund_amount)
+    assert features.frequency.eq(features.gross_frequency).all()
+    assert features.unique_products.eq(features.gross_unique_products).all()
+    assert np.isclose(features.monetary.sum(), known.total_amount.sum(), atol=1e-6, rtol=0)
+    assert np.allclose(features.monetary, features.gross_monetary, atol=1e-6, rtol=0)
+    assert np.allclose(features.net_monetary, features.monetary - features.matched_refund_amount, atol=1e-6, rtol=0)
+    by_customer = effective.groupby('customer_id').agg(
+        frequency=('invoice_no', 'nunique'), unique_products=('stock_code', 'nunique'),
+        first_purchase_date=('invoice_datetime', 'min'), last_purchase_date=('invoice_datetime', 'max'))
+    pd.testing.assert_frame_equal(features.set_index('customer_id')[by_customer.columns], by_customer, check_dtype=False)
     expected = result.cleaning.classified.loc[result.cleaning.classified.is_cancellation, 'source_row']
     assert set(returns.source_row) == set(expected)
     assert returns.source_row.is_unique and returns.invoice_no.str.startswith('C').all()
@@ -464,11 +497,14 @@ def validate_datasets(result: PipelineResult):
     assert joined.customer_id_return.eq(joined.customer_id_sale).all()
     assert joined.stock_code_return.eq(joined.stock_code_sale).all()
     assert joined.invoice_datetime_sale.lt(joined.invoice_datetime_return).all()
+    assert np.isclose(joined.unit_price_sale, joined.unit_price_return, atol=1e-9, rtol=0).all()
+    assert not returns.price_mismatch.any()
     exact = joined.match_method.eq('exact_quantity')
     assert joined.loc[exact, 'quantity_sale'].eq(-joined.loc[exact, 'quantity_return']).all()
     usage = matched.assign(used=-matched.quantity).groupby('matched_source_row').used.sum()
     assert usage.le(sales.set_index('source_row').quantity.reindex(usage.index)).all()
     assert np.isclose(features.matched_refund_amount.sum(), -matched.total_amount.sum(), atol=1e-6, rtol=0)
+    assert returns.loc[returns.match_status.ne('matched'), 'matched_source_row'].isna().all()
     # 按日核对：标准化金额必须等于各互斥分类之和。
     classified = result.cleaning.classified
     daily = classified.groupby([classified.invoice_datetime.dt.normalize(), 'record_class']).total_amount.sum().groupby(level=0).sum()
@@ -495,44 +531,65 @@ def export_parquet(result: PipelineResult, output_dir: Path):
 
 @stage
 def write_pipeline_report(result: PipelineResult, path: Path, input_hash: str):
-    # 保留基础清洗报告中的规则和对账，再补充最终输出。
-    write_report(result.cleaning, path)
-    text = Path(path).read_text(encoding='utf-8').replace('# Q3.1 基础清洗验证报告', '# Q3.1 ETL 验证报告')
-    text = text.replace('本阶段不实现RFM、退款匹配、Parquet。', '下列三个Parquet复用以上清洗规则。')
-    text = text.replace('待处理退款匹配、部分退货与累计数量占用；', '已按下述规则完成退款匹配及数量占用；')
     sales, features, returns = result.sales_facts, result.customer_features, result.returns_log
+    df = result.cleaning.classified
     matched = returns.match_status.eq('matched')
     eligible = returns.quantity.lt(0) & returns.unit_price.gt(0) & returns.stock_type.eq('product') & returns.customer_id.notna() & ~returns.excluded_from_analysis & returns.invoice_datetime.notna()
+    gross_customers = sales.customer_id.nunique()
     metrics = {
-        'sales_facts行数 / 金额': f'{len(sales):,} / {sales.total_amount.sum():.6f}',
-        'customer_features客户数': len(features),
+        '原始 / 分析层行数': f'{len(df):,} / {(~df.excluded_from_analysis).sum():,}',
+        '指定代码 / 零价 / 合并排除行数': f'{df.stock_type.eq("excluded_stock").sum()} / {df.unit_price.eq(0).sum()} / {df.excluded_from_analysis.sum()}',
+        'sales_facts行数 / 正向金额': f'{len(sales):,} / {sales.total_amount.sum():.6f}',
+        '销售匿名行数 / 原始重复多余行': f'{sales.customer_id.isna().sum()} / {df.duplicate_extra.sum()}',
+        '大额数量标记行数 / 销售行数（已确认真实，保留）': f'{df.extreme_quantity_review.sum()} / {sales.extreme_quantity_review.sum()}',
+        '原始有客户数 / 有正向销售客户数 / RFM有效客户数': f'{df.customer_id.nunique()} / {gross_customers} / {len(features)}',
+        '全退客户数（仍保留正向RFM）': int(features.fully_returned.sum()),
+        'R基准日': df.invoice_datetime.max().date(),
         'R范围 / F范围': f'{features.recency_days.min()}–{features.recency_days.max()} / {features.frequency.min()}–{features.frequency.max()}',
-        'M范围 / 独立商品数范围': f'{features.monetary.min():.3f}–{features.monetary.max():.3f} / {features.unique_products.min()}–{features.unique_products.max()}',
-        'R基准日': result.cleaning.classified.invoice_datetime.max().date(),
-        'M合计（有客户正向金额）': f'{features.monetary.sum():.6f}',
-        '一次购买客户数': int(features.is_one_time_buyer.sum()),
-        '匹配商品退款金额': f'{features.matched_refund_amount.sum():.6f}',
-        'net_monetary合计': f'{features.net_monetary.sum():.6f}',
-        '净口径有效 / 全退客户数': f'{features.net_eligible.sum()} / {(~features.net_eligible).sum()}',
+        'M范围 / 商品数范围': f'{features.monetary.min():.3f}–{features.monetary.max():.3f} / {features.unique_products.min()}–{features.unique_products.max()}',
+        '有客户正向金额（含全退客户）': f'{sales.loc[sales.customer_id.notna(), "total_amount"].sum():.6f}',
+        '已匹配退款金额（含全退客户）': f'{-returns.loc[matched, "total_amount"].sum():.6f}',
+        '正式RFM金额M合计（正向，不扣退款）': f'{features.monetary.sum():.6f}',
+        '退款后金额合计（net_monetary，仅审计）': f'{features.net_monetary.sum():.6f}',
+        '一次正向购买客户数': int(features.is_one_time_buyer.sum()),
         'returns_log行数 / 带符号金额': f'{len(returns):,} / {returns.total_amount.sum():.6f}',
         '匹配行数 / 全部C记录成功率': f'{matched.sum()} / {matched.mean():.2%}',
-        '满足匹配资格行数 / 成功率': f'{eligible.sum()} / {matched.sum() / eligible.sum():.2%}' if eligible.any() else '0 / 不适用',
+        '有客户商品负数量退款资格行数 / 成功率': f'{eligible.sum()} / {matched.sum() / eligible.sum():.2%}' if eligible.any() else '0 / 不适用',
         '精确数量 / 部分退货匹配行数': f'{returns.match_method.eq("exact_quantity").sum()} / {returns.match_method.eq("partial_quantity").sum()}',
-        '多候选行数 / 价格不同行数': f'{returns.candidate_count.gt(1).sum()} / {returns.price_mismatch.sum()}',
+        '多候选匹配行数 / 已匹配价格不同行数': f'{returns.candidate_count.gt(1).sum()} / {returns.price_mismatch.sum()}',
         'C记录重复多余行（保留）': int(returns.duplicate_extra.sum()),
-        '未进入客户表的退款客户数': int(returns.loc[returns.customer_id.notna() & ~returns.customer_id.isin(features.customer_id), 'customer_id'].nunique()),
         '总耗时（含清洗、匹配、断言、导出及回读）': f'{result.elapsed_seconds:.2f}秒',
     }
-    text += '\n\n## 三个输出\n\n' + markdown_table(pd.DataFrame({'指标': list(metrics), '结果': list(metrics.values())}))
-    text += """\n\n## RFM与退货口径
+    text = """# Q3.1 ETL 验证报告
 
-- 题目字段recency_days、frequency、monetary、日期及商品数基于有客户的正向真实销售。R按数据集最大日期减最后购买日期（日历日），不取系统时间。F按独立Invoice，主要国家按独立Invoice数最多选取，平手按国家名称排序。
-- net_*为退款后扩展：按实际匹配退款金额扣减M；数量全部退完的明细不再参与有效订单、商品数及购买日期，部分退货保留余量。全退客户仍保留题目要求的正向特征，但net_eligible=False，净口径分群应排除，净购买日期及R为空。
-- returns_log保留所有C开头原始行，包含费用和1条正数量C，均有处理状态；零价和指定代码即使出现C也仅为审计，不参与匹配。非C负数量PADS继续在基础取消明细中，不进入题目限定的returns_log。
-- 匹配只用有客户的商品退货与真实销售，客户、商品相同且销售时间严格早于退货；优先原始数量等于退货绝对数量的最近可用销售，其次尝试余量足够的最近单条销售（partial_quantity扩展）。同一时刻多个销售按source_row最小优先。
-- 每笔退款按时间、source_row顺序占用原销售数量，累计不能超过原数量；可多次部分退货。不跨多条销售拼单，原单不足则不匹配。exact_quantity符合README的等量规则；partial_quantity是处理部分退货的明确扩展。
-- 重复销售及退款均保留，视作独立来源行，但数量不可重复占用。多候选数、匹配方式、来源行及价格差异保留供审计；数量约束不等于已证明重复导出或真实退款。
-- 不强制价格相同，价格差异单列；净M扣退款记录本身金额。未匹配退款不扣M，按客户另列金额与行数，不能把匿名退款分摊给客户。
+## 已确认规则
+
+- 原始CSV只读，派生字段规范类型、清理首尾空白，缺失不填补。source_row关联原始数据行（从1开始，不含表头）；原始与分类审计明细保留在返回对象中。
+- 重复保留；极端大额已确认真实，保留。数量绝对值≥70000仅作标记，不作为错误或删除依据。
+- 指定代码与零价从分析层排除，审计层保留；其余未知代码按描述是否含ebay（不区分大小写）分为ebay或product，不含ebay及缺描述均归product。费用、礼券、测试、坏账不混入商品销售。
+- sales_facts仍为数字发票、product、正数量和正价格的销售明细，包含匿名，不从中删除后来被退款的原销售。金额=数量×单价，不代表实付。
+- returns_log保留全部C记录。正数量C、非商品和未匹配记录的匹配字段为NULL，不扣减客户金额。负数量非C的PADS保留在基础取消明细，不进入仅限C的退货输出。
+
+排除代码：""" + ', '.join(sorted(EXCLUDED_CODES)) + '。\n\n## 实际结果\n\n'
+    text += markdown_table(pd.DataFrame({'指标': list(metrics), '结果': list(metrics.values())}))
+    text += """\n\n## 退货匹配
+
+1. 退款按时间、source_row顺序处理。候选须同客户、同商品、单价相同、销售严格早于退款且余量足够。单价仅容忍1e-9浮点误差，不四舍五入到两位小数。
+2. 先选原始数量等于退款绝对数量的最近销售；无等量候选才选余量足够的最近销售，标记partial_quantity。同时间选source_row最小者；candidate_count记录该优先级下候选数。
+3. 每次匹配扣减可退余量，允许买10个分两次各退5个；累计不能超退。不跨销售行拼单，找不到合适销售则NULL，不占用余量。
+4. 原候选价格不同时，会从其他同价候选重新选择；没有同价且余量足够的销售，状态为no_same_price_sale并给NULL。重复来源行仍分别处理，不能证明业务上没有重复退款。
+
+## 旧价格差异记录复核
+
+"""
+    review = result.price_review or {}
+    text += f'复算旧规则的 {review.get("previous_price_mismatch", 0)} 条价格差异记录：{review.get("alternative_matched", 0)} 条找到其他同价销售，{review.get("now_null", 0)} 条在新规则下未匹配，匹配字段为NULL。新旧规则各自按时间重新分配余量，其他记录也可能受占用变化影响。\n'
+    text += """\n## 正式RFM口径
+
+- 正式recency_days、frequency、monetary、购买日期、商品数及主要国家均基于有客户的正向真实销售，与README一致；匿名不进入客户表。
+- R以数据集最大日期减最后正向购买日期（日历日）；F按正向独立Invoice计；M为正向销售金额之和，不扣退款。全退和部分退货不改变上述字段，全退客户仍保留。
+- 主要国家按正向购买的独立Invoice数最多选取，平手按国家名称排序；is_one_time_buyer表示只有一次正向购买。gross_*作为兼容审计字段，与相应正向字段一致。
+- 匹配退款额、退货次数、未匹配退款额、remaining_quantity、fully_returned和net_monetary仅供独立退货审计，不用于正式RFM。net_monetary=monetary－已匹配退款金额，未匹配退款不扣减。
 
 ## 匹配状态及原因
 
@@ -540,27 +597,25 @@ def write_pipeline_report(result: PipelineResult, path: Path, input_hash: str):
     statuses = returns.groupby('match_status').agg(rows=('source_row', 'size'), amount=('total_amount', 'sum')).reset_index()
     statuses['说明'] = statuses.match_status.map({
         'matched': '已匹配', 'insufficient_remaining_quantity': '历史销售余量不足（不跨行拼单）',
+        'no_same_price_sale': '无同价且余量足够的历史销售',
         'missing_customer': '缺少客户ID', 'no_customer_product_sale': '没有该客户商品的有效销售',
-        'no_earlier_sale': '没有严格早于退款的销售', 'non_negative_c_review': 'C正数量待查',
-        'non_product': '非商品记录，不匹配商品销售', 'excluded_by_cleaning': '清洗规则排除',
-        'invalid_core': '关键字段无效', 'non_positive_price': '单价非正',
-    })
+        'no_earlier_sale': '没有严格早于退款的销售', 'non_negative_c_review': 'C正数量，匹配NULL',
+        'non_product': '非商品，不匹配商品销售', 'excluded_by_cleaning': '清洗排除',
+        'invalid_core': '关键字段无效', 'non_positive_price': '单价非正'})
     text += markdown_table(statuses.rename(columns={'match_status': '状态', 'rows': '行数', 'amount': '带符号金额'}))
-    text += '\n\n## 输出字段空值率（仅列非零，其余均为0）\n\n'
     nulls = []
-    for name, df in [('sales_facts', sales), ('customer_features', features), ('returns_log', returns)]:
-        for col in df.columns:
-            if not df[col].isna().any():
-                continue
-            nulls.append({'数据集': name, '字段': col, '空值率': f'{df[col].isna().mean():.4%}'})
-    text += markdown_table(pd.DataFrame(nulls))
+    for name, frame in [('sales_facts', sales), ('customer_features', features), ('returns_log', returns)]:
+        for col in frame.columns:
+            if frame[col].isna().any():
+                nulls.append({'数据集': name, '字段': col, '空值率': f'{frame[col].isna().mean():.4%}'})
+    text += '\n\n## 输出空值率（仅列非零，其余均为0）\n\n' + markdown_table(pd.DataFrame(nulls, columns=['数据集', '字段', '空值率']))
     text += """\n\n## 校验与限制
 
-三个输出的关键字段、类型、正向金额、R非负、客户唯一性、C记录完整性、匹配时间与键、累计退货数量、金额及按日分类对账均通过断言；Parquet已逐表回读并与内存表完整比较。全表清洗与汇总使用向量化，仅约两万条取消记录使用有状态循环。未使用随机算法，固定排序和来源行确保相同输入确定性输出（随机种子固定42）。
+已断言销售正值、客户唯一性与有效客户覆盖、R非负、匹配键/时间/同价、累计数量、未匹配NULL、正向RFM金额与销售对账、审计净金额及按日分类金额对账。三份Parquet逐表回读与内存表完整比较。全表清洗使用向量化，仅约两万条退款使用有状态循环；固定排序和种子42，结果可复现。pipeline_log.txt记录分步耗时、未匹配明细及旧价格差异逐行复核。
 
-未知代码按描述分类仍属当前约定；匿名不能做RFM或可靠退货关联；等时间戳及跨多条销售拆分退款不自动匹配。重复保留可能放大金额和可退数量。极端大额按决定保留；价格差异、歧义匹配和未匹配退款需业务复核。销售金额不等于支付实收，净特征也不代表完成财务核销。
+匿名不能可靠匹配或做RFM；同时间戳和跨销售行拼单退款不自动匹配。多候选只是规则推断，重复保留仍可能放大金额和可退数量。正式M为正向交易额，不代表退款后净消费；审计净金额不扣未匹配退款，仍可能偏高。极端大额按已确认真实处理。
 
-README Q3.1：三个指定文件及必需字段、至少5个函数、日志与异常捕获、输出断言、可复现和两分钟性能要求均已实现。部分退货为等量规则之外的扩展，使用match_method可区分；正向RFM与退款后net_*分开，避免混用两种口径。Q1、Q2代码未修改。
+README所需文件和字段、模块化、日志/异常、断言及性能要求均实现。按本次确认，正式RFM恢复README的正向口径；部分退货仍是等量匹配的已接受扩展。Q1、Q2代码不变。
 
 输入CSV SHA256：`""" + input_hash + '`。\n'
     Path(path).write_text(text, encoding='utf-8')
@@ -594,9 +649,13 @@ def run_pipeline(input_path=ROOT / 'data/online_retail_ii.csv', output_dir=None,
     input_hash = hashlib.sha256(input_path.read_bytes()).hexdigest()
     cleaning = run_basic_cleaning(input_path)
     sales = build_sales_facts(cleaning)
+    # 旧规则仅作对照审计，正式输出严格要求同价。
+    previous = match_returns(cleaning.classified, sales, require_same_price=False)
     returns = match_returns(cleaning.classified, sales)
+    price_review = audit_price_changes(previous, returns)
+    del previous
     features = compute_rfm(sales, returns, cleaning.classified.invoice_datetime.max())
-    result = PipelineResult(cleaning, sales, features, returns)
+    result = PipelineResult(cleaning, sales, features, returns, price_review=price_review)
     validate_datasets(result)
     export_parquet(result, output_dir)
     assert hashlib.sha256(input_path.read_bytes()).hexdigest() == input_hash, '原始文件发生变化'
