@@ -10,7 +10,8 @@
 - 卖家发货超时：order_delivered_carrier_date > 该订单最早的 shipping_limit_date。
 - 状态事件数：Olist 只有最终状态，没有状态变更日志，用"非空里程碑时间戳个数"近似
   （下单/审核/交承运商/送达），这是下限估计，真实系统里 invoiced/processing 等中间状态会更多。
-- LLM 单条成本：引用 Q4 v6 实测（平均输入 323.67、输出 115.50 token，gpt-4.1-mini 冻结费率）。
+- LLM 单条成本：引用 Q4 全量主流程实测（gpt-4o-mini，每批 5 条，每条平均输入 306.76、输出 102.07 token），
+  按无缓存单价计算（缓存命中不可预期，规划预算不依赖缓存）。
 """
 
 import json
@@ -23,9 +24,9 @@ ROOT = Path(__file__).resolve().parents[1]
 OLIST = ROOT / "data" / "olist"
 OUT = Path(__file__).resolve().parent / "baseline_stats.json"
 
-# Q4 v6 实测，见 q4_llm_extraction/cost_report.md
-Q4_IN_TOKENS, Q4_OUT_TOKENS = 323.67, 115.50
-PRICE_IN, PRICE_OUT = 0.40, 1.60  # USD / 百万 token，gpt-4.1-mini
+# Q4 全量主流程实测：13,898 条评论共 4,263,305 输入、1,418,521 输出 token，见 q4_llm_extraction/cost_report.md
+Q4_IN_TOKENS, Q4_OUT_TOKENS = 4_263_305 / 13_898, 1_418_521 / 13_898
+PRICE_IN, PRICE_OUT = 0.15, 0.60  # USD / 百万 token，gpt-4o-mini-2024-07-18（无缓存）
 SHORT_WORDS = 3  # ≤3 个词的短评视为可走规则（如 "ruim"、"não recebi"）
 
 

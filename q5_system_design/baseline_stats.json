@@ -39,33 +39,33 @@
     "hour_of_day_share_max": 0.0671
   },
   "llm_cost_1m_per_day": {
-    "per_call_usd": 0.00031427,
+    "per_call_usd": 0.00010725,
     "daily_orders": 1000000,
     "tiers": {
       "A_全部评价过LLM": {
         "calls_per_day": 997800,
-        "usd_per_day": 313.58,
-        "usd_per_year": 114455
+        "usd_per_day": 107.02,
+        "usd_per_year": 39061
       },
       "B_只处理有文本": {
         "calls_per_day": 411792,
-        "usd_per_day": 129.41,
-        "usd_per_year": 47236
+        "usd_per_day": 44.17,
+        "usd_per_year": 16121
       },
       "C_只处理<=3星且有文本": {
         "calls_per_day": 145280,
-        "usd_per_day": 45.66,
-        "usd_per_year": 16665
+        "usd_per_day": 15.58,
+        "usd_per_year": 5687
       },
       "D_再剔除<=3词短评": {
         "calls_per_day": 135002,
-        "usd_per_day": 42.43,
-        "usd_per_year": 15486
+        "usd_per_day": 14.48,
+        "usd_per_year": 5285
       },
       "E_再去重(精确重复)": {
         "calls_per_day": 127132,
-        "usd_per_day": 39.95,
-        "usd_per_year": 14583
+        "usd_per_day": 13.64,
+        "usd_per_year": 4977
       }
     }
   }
