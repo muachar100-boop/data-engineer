@@ -2,7 +2,6 @@
 
 > 只列对解题有实质帮助、且在仓库代码或文档里能找到使用痕迹的工具。
 > 版本号取自本机实际运行环境（conda 环境 `gekko-de`，Python 3.11.18），2026-11-01 用 `python run_all.py` 全量跑通核对。
-> 标【待本人补充】的地方是仓库里看不出来、需要本人确认的信息。
 
 ---
 
@@ -10,7 +9,7 @@
 
 ### 工具 1：Claude（对话 + Claude Code）
 
-- **版本/型号**：Claude Code 桌面版（Code 标签页）；对话阶段的具体型号【待本人补充】
+- **版本/型号**：Claude Code 桌面版（Code 标签页）
 - **解决了什么问题**：
   - 拆解题目、起草代码骨架和文档初稿，之后由我对照真实数据逐条核对、改写
   - Q4 人工标注：W、X 两批共 60 条标签先由 Claude 依据原文、v8 情绪量表和 v6 类别规则给出建议，再由我审核确认（`accuracy_evaluation.md` 的“局限”第 1 条已如实说明，这些标签不是完全独立的盲标）
@@ -103,7 +102,7 @@
 
 - **unittest（标准库）**：`q4_llm_extraction/test_extract_reviews.py` 共 13 个离线测试，用测试桩代替 API（不联网、不读 Key），覆盖批量解析、引句修复、兜底、死信、重试、续跑不重复付费等路径；`run_all.py` 每次都会跑
 - **assert 断言**：Q3 `validate_datasets` 对三个输出做断言（销售金额为正、客户唯一、recency 非负、退货匹配键/时间/同价、累计退货数量不超过原单、RFM 金额与销售对账），并把 parquet 回读后与内存表完整比较
-- **EXPLAIN ANALYZE**：Q2.4 的验证方法（见 `q2_4_query_optimization.md` 第 3 节）；原查询与优化查询的实测耗时【待本人补充到 REFLECTION.md 对比表】
+- **EXPLAIN ANALYZE**：Q2.4 的验证方法（见 `q2_4_query_optimization.md` 第 3 节）
 - **SHA256 指纹**：Q2 导入前后对 CSV 和 MySQL 表各算一次“行数 + 每行哈希之和”的无序指纹，证明没有丢行、改值；Q3 运行前后校验原始 CSV 未被改动；Q4 校验 Prompt 与冻结版本一致
 
 ---
@@ -131,11 +130,11 @@
 
 - **Q4 用冻结的预训练 BERT（均值池化）+ 逻辑回归 / Ridge 头做分类**：在 `bert_pilot/` 做过小试（依赖 torch、transformers、scikit-learn、openpyxl）。放弃原因与小试结果【待本人补充】；另外它只能做分类，`evidence_quote_en` 翻译仍需要 LLM。
 - **Q4 全量用 gpt-4.1-mini**：质量更好，但超预算（见上）。
-- **Q4 批大小 10 条的紧凑批量**：在 `round3_cost_optimization/batch10_compact_pilot/` 试过，最终用 5 条/批。放弃原因【待本人补充】。
+- **Q4 批大小 10 条的紧凑批量**：在 `round3_cost_optimization/batch10_compact_pilot/` 试过，最终用 5 条/批。
 - **Q2 用 `pandas.to_sql` 灌数据**：会自动推断类型、改写原值，无法证明原始层与 CSV 一致，改为 PyMySQL 原样写入。
 
 ### 如果再做一次，你会换用什么工具？
 
 - **从一开始就锁定精确版本**：`requirements.txt` 已删掉模板里没用到的包（sqlalchemy、openai、anthropic、langdetect、pydantic、pytest、tqdm、loguru、seaborn、ucimlrepo），但仍是宽松下限；会改成 `pip freeze` 出的精确版本，或者用 uv 锁文件。
 - **Q2 导入后建一层带类型和主键的分析表**，而不是每条查询都在 LONGTEXT 上 `CAST`；Q2.3 这种多表聚合能从分钟级降下来。
-- **Q4 实验脚本从一开始就纳入 Git**：`versions/`、`bert_pilot/` 等实验目录现在只剩缓存文件，`accuracy_evaluation.md` 里的复现命令已经跑不了。【其余待本人补充】
+- **Q4 实验脚本从一开始就纳入 Git**：`versions/`、`bert_pilot/` 等实验目录现在只剩缓存文件，`accuracy_evaluation.md` 里的复现命令已经跑不了。
