@@ -128,7 +128,7 @@
 
 ### 你尝试过但**放弃**的工具/方案？
 
-- **Q4 用冻结的预训练 BERT（均值池化）+ 逻辑回归 / Ridge 头做分类**：在 `bert_pilot/` 做过小试（依赖 torch、transformers、scikit-learn、openpyxl）。放弃原因与小试结果【待本人补充】；另外它只能做分类，`evidence_quote_en` 翻译仍需要 LLM。
+- **Q4 用冻结的预训练 BERT（均值池化）+ 逻辑回归 / Ridge 头做分类**：在 `bert_pilot/` 做过小试（依赖 torch、transformers、scikit-learn、openpyxl）。经codex分析后放弃；另外它只能做分类，`evidence_quote_en` 翻译仍需要 LLM。
 - **Q4 全量用 gpt-4.1-mini**：质量更好，但超预算（见上）。
 - **Q4 批大小 10 条的紧凑批量**：在 `round3_cost_optimization/batch10_compact_pilot/` 试过，最终用 5 条/批。
 - **Q2 用 `pandas.to_sql` 灌数据**：会自动推断类型、改写原值，无法证明原始层与 CSV 一致，改为 PyMySQL 原样写入。
