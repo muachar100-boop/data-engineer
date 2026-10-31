@@ -1,0 +1,19 @@
+{
+  "source": "分支 q4-llm-extraction-final 的 versions/v8（W）与 versions/v10（X）；标签哈希与运行前封存的 manifest 一致",
+  "sha256": {
+    "W": {
+      "decision_rule.json": "5eda3b2bfb75fdbf45dfd4faf7f66ce4fe5d3c0ff4c217e691677e612dd6c3bf",
+      "human_labels.csv": "8afa58507a375e3ee4f4c851f17103de6ea49a12d8341277ff4764c882465f41",
+      "outputs.json": "0940546bda16f900513dcab023aed8b65f2363ebd4346db957cbb9b4881c22e8",
+      "samples.json": "8cc30ee0223809505b81f82d565099d87ad96c98cc35ed79c047abb8bdbdb0a5",
+      "sealed_labels_manifest.json": "5d174bfb94d30d078b0f733fe8699b4f705ff9eb13299ce73ba82e3a4fcee600"
+    },
+    "X": {
+      "decision_rule.json": "4f4eeb1c03022c52d4880a8fdff5cb6b74b4a5581b3f64fe5bcb8c96a56f5f11",
+      "human_labels.csv": "af38d698c3b30dc2368f85308b3e89877c5dde008ea45cfe9d5586167d274c14",
+      "outputs.json": "7588ae4bbc686a7cbf92b3fafe1e58c131051a394072a8c032843cebc8029bf0",
+      "samples.json": "9711686847ef52e746c02662cc10f8f1bb3b9416c7c7f52bf63ba80598dc5387",
+      "sealed_labels_manifest.json": "fc653414f63c9f96c52f0fe86f2ab5326e854a87f054d113d73793dcf2dc64db"
+    }
+  }
+}

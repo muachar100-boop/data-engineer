@@ -1,0 +1,272 @@
+[
+  {
+    "sample_id": "W01",
+    "review_id": "65172425abbfdcccee4d4f399e85006d",
+    "review_score": 1,
+    "source_hash": "bfc6ff2ee81e976307392e654188f12b88a4349324b007050b177343d0b342fd",
+    "raw_title": "",
+    "raw_message": "Recebi o prod que pedi. Não serviu pq pedi pelas medidas erradas fornecidas no site.Pedi troca por numero menor. Não me deram atenção. Pedi cancelamento. Se não for possivel fico com o prejuizo.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W02",
+    "review_id": "d4333b3321012c1bfa9049bc9c3ba77e",
+    "review_score": 3,
+    "source_hash": "b92aba9f0af9aeed23533e1c41ab6e847502fb23f1d6630c2bde348d335c1e89",
+    "raw_title": "",
+    "raw_message": "Produto entregue em perfeito estado.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W03",
+    "review_id": "6b2ee488cd87d8a9ee67eb63ad5a7a4c",
+    "review_score": 1,
+    "source_hash": "236735f9e349208735d62690b80f52dbda5262078537c8f04e9c69b7eebd7d57",
+    "raw_title": "",
+    "raw_message": "Prateleiras com cantos vivo, colunas nao encaixam, faltam arroelas para nao danificar a pintura, prateleiras chegaram todas amassadas.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W04",
+    "review_id": "5ef8c3cb16e280f8b223e1af635940c3",
+    "review_score": 3,
+    "source_hash": "036f958ffed91d2c71d4364b7804a8488b02c82512e24d0039304ff9c6e36386",
+    "raw_title": "",
+    "raw_message": "Produto entregue fora do prazo mas chegou corretamente.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W05",
+    "review_id": "f31f7df1eee767691a02c580df9fe069",
+    "review_score": 1,
+    "source_hash": "29e8b9112c15e41f94939bd43ba66fc9d122439d0879dbf09e89edefa2624e94",
+    "raw_title": "",
+    "raw_message": "Nao recebi a encomenda. ",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W06",
+    "review_id": "9c528105dfc73bee0dec5dda37d5a1d8",
+    "review_score": 2,
+    "source_hash": "07031927b9de3a3ac6d0f0066d9479773ea8db599b48fc57eef20de849a50bea",
+    "raw_title": "",
+    "raw_message": "Não gostei do produto, mas a logística foi boa.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W07",
+    "review_id": "63f20b8f065dd05018d60a9b30e9c9aa",
+    "review_score": 1,
+    "source_hash": "af0e6e2349722ada03f342faa71dd4fceedf8a4f455fc484f2ebd8cc61a516da",
+    "raw_title": "Produto não entregue",
+    "raw_message": "É lamentável. Nenhum comunicado sobre o motivo de tanta demora",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W08",
+    "review_id": "96ec32719edab5fd4f9cb4d83f7442d5",
+    "review_score": 1,
+    "source_hash": "2afe109d10c117192231ca6d7d085fddc4ac44834b1877bd4d76b70c48dceff0",
+    "raw_title": "",
+    "raw_message": "Na embalagem consta que é de 500mg porém cada cápsula tem apenas 75mg. Propaganda enganosa.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W09",
+    "review_id": "86b2d291de4ad5e739da3f61c91d45da",
+    "review_score": 1,
+    "source_hash": "165b0acba62f291e44b5e9c79b289cfedda7c1cce698c7970917ef1faae47363",
+    "raw_title": "",
+    "raw_message": "Todos os produtos chegaram quebrados e um absurdo isso eles foram muito mau embalados e não tinha especificação na caixa falando q era produto frágil as 3 panelas de barro q comprei chegaram quebradas",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W10",
+    "review_id": "df7dd9d2f92d986a37d34993ce93e0af",
+    "review_score": 1,
+    "source_hash": "1522085d89a154cf0877e42fb8d48d1474c753925797b8ed8a5d485d0f5beb19",
+    "raw_title": "",
+    "raw_message": "o natal esta ai ,meu neto espera pelo presente, comprei 25 de novembro,e ate agora nada.\r\nO que fazer? nem vcs consegur responder. Esta em transito para jose dos campos .... vai ver que que estraviou",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W11",
+    "review_id": "fb37a1f6f9d72bbd4706ad9332813af7",
+    "review_score": 1,
+    "source_hash": "c139ddd4e3cbe67fa3b3a003c41030f74b477faa38eca0c3d22d0e9070f3db94",
+    "raw_title": "",
+    "raw_message": "Rastreamento: PP 272 681 476 BR\r\nAinda não chegou na unidade do Correios, em Porto Alegre.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W12",
+    "review_id": "5ac7c61eb91e5f9376568f3e24047e74",
+    "review_score": 1,
+    "source_hash": "4e10af2d2d51c1a3a03422b53e95d858f32a595ea73b333b8e8e32f19ba3736f",
+    "raw_title": "",
+    "raw_message": "Muita demora para avisar que não tinha o produto, venderam o que não tinham, demora para devolver o dinheiro, absurdo.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W13",
+    "review_id": "4d6642d3685dfe534c9d23df617272aa",
+    "review_score": 3,
+    "source_hash": "7a9b16934c741bc38698cceb8134d69c21c49fa4ed1783284487f0cad7cd23db",
+    "raw_title": "",
+    "raw_message": "achei muito pequena...pelas medidas da especificação imaginei outro tipo de bolsa...",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W14",
+    "review_id": "02d40b52a746c7d3fdeb703d1a56e072",
+    "review_score": 1,
+    "source_hash": "88dfc25c2c95dc49bc5f5cacabfd1d7c00e8e3a50d7e1d98654059b18d0948f3",
+    "raw_title": "Luvas",
+    "raw_message": "Comprei mas nao veio entrega ainda queria dabe onde esta o produto",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W15",
+    "review_id": "0a67da7930c9447fef600462f1613dca",
+    "review_score": 3,
+    "source_hash": "d20296079ae2071e9ba76ef6c33de0a33dfa5977d19ee00b38624af5224c64d6",
+    "raw_title": "",
+    "raw_message": "chego tudo certo ok\r\n",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W16",
+    "review_id": "702a7b6914822974dafc9f43e5b9c427",
+    "review_score": 1,
+    "source_hash": "83cb33ec9cc53b3f6f7a62516eedddc858ef52a9fcbe15853a39bccb3aa392ce",
+    "raw_title": "",
+    "raw_message": "boa tarde..gostaria de saber como cancelar a co2014? chegaram apenas 3 pneus, , alem disso verificamos que os que chegaram ja esta expirando a validade pois foram fabricados em 2014. aguardo contato ",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W17",
+    "review_id": "4864c7a3d086f33fa4c38ca2bb63b441",
+    "review_score": 1,
+    "source_hash": "d3fd88c16c4f3da79f118fad55dfa8be90ae738900d884059c4072768872119a",
+    "raw_title": "",
+    "raw_message": "O PRODUTO DESCOLOU E ATÉ AGORA NAO RESPONDERAM E UMA VERGONHA",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W18",
+    "review_id": "6de00faa5347f996508f776ae159c374",
+    "review_score": 1,
+    "source_hash": "8d081c74df08742e3388e951fadac606729b99c7fd9b7c6ec3fc728c8bd976f6",
+    "raw_title": "",
+    "raw_message": "Veio a cor errada e não estou conseguindo encaixar corretamente as pulseiras.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W19",
+    "review_id": "1eb81f399bd7ba2333982eff84bd572f",
+    "review_score": 1,
+    "source_hash": "d91b00fd76fd30ae7f6618602a9dc863231ebbdc000d25203f36f9201ff43b30",
+    "raw_title": "",
+    "raw_message": "O produto não foi entregue. E eu não posso ficar o tempo todo em casa aguardando. Tenho que trabalhar.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W20",
+    "review_id": "01f729a68a977867b3b819eb5f96be64",
+    "review_score": 2,
+    "source_hash": "cd804d956ccffeac476b38d7c8d9d686198f23298f2ae30961f21b2b9c8ee288",
+    "raw_title": "ENTREGA",
+    "raw_message": "ATE AGORA O PRODUTO NÃO FOI ENTREGUE",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W21",
+    "review_id": "2f16f71d7717735cc8bb02c213686a2e",
+    "review_score": 3,
+    "source_hash": "4f8606bbc8052c1ce9cb18af7217cfb0b17a51a4b8168e049660744bc206ad6b",
+    "raw_title": "",
+    "raw_message": "Estou aguardando até hoje o recebimento do produto. Parece problema com os correios, mas não é certeza.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W22",
+    "review_id": "b76eca59d904c0c59b377c412194e9e1",
+    "review_score": 1,
+    "source_hash": "9ce65e9ff395390a093b1fd1e29b73099a00d5af4c35e4c4a9b0c329261c3576",
+    "raw_title": "",
+    "raw_message": "Não é possível tanta falta de atenção uma demora tremenda para receber o produto pra quando chegar vim errado e agora o q faço ???",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W23",
+    "review_id": "babc416e556d98e1ef6af934dc325cdc",
+    "review_score": 1,
+    "source_hash": "f9287eb06181ba57b679ec519b9a0d25844e44b75e1c68efa7aecfc4a27b642b",
+    "raw_title": "",
+    "raw_message": "Nunca recomendaria esse site alguém pois achei uma falta de respeito da falta de vcs não estregaram meu produto e nem se quer deram satisfação porcaria de site nunca mais vou comprar dia 11 ganho bebe",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W24",
+    "review_id": "640a2362c470c6006b36ae2b39859859",
+    "review_score": 3,
+    "source_hash": "edfc56bce16a8b697af4a0d0ffdfef79b7cf13501f66bcb684f3a6080272c0d6",
+    "raw_title": "",
+    "raw_message": "INFELIZMENTE O ÚNICO PROBLEMA É A ENTREGA SER FEITA PELOS CORREIOS, NÃO COMPARECEM NA DATA DA ENTREGA E AINDA COLOCAM INFORMAÇÕES INCORRETAS!\r\nEX.: NÃO TINHA NINGUÉM NO LOCAL DE ENTREGA!",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W25",
+    "review_id": "26b5f1042cef33e1d46be7806ef39250",
+    "review_score": 3,
+    "source_hash": "fcad22be646f5eb53c3c81a924344ce77c1cd1b38f23e35609d75b30c1adf13f",
+    "raw_title": "",
+    "raw_message": "Solicitei o cancelamento dessa compra, entrei em contato várias vezes e todos os atendentes confirmaram que a compra foi cancelada mas no site continua como pedido a caminho.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W26",
+    "review_id": "8f16e30ff188fe57a427fee7afb60c90",
+    "review_score": 1,
+    "source_hash": "6b4cde8d66e36b5808f915544b326a24cc0ff05d355ae2ba1a5730cec0eae51e",
+    "raw_title": "",
+    "raw_message": "O tampo da mesa chegou todo amassado e batido.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W27",
+    "review_id": "2376f556b8d5c24003acef73ab11f636",
+    "review_score": 3,
+    "source_hash": "21cf96d0402010b805980c596cce7a6bb0e9c9b895c2ae080efecb11792b66fa",
+    "raw_title": "",
+    "raw_message": "Foi entregue apenas parte do pedido",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W28",
+    "review_id": "4a0099475ab9519736f1aef9afe906eb",
+    "review_score": 1,
+    "source_hash": "95100cc56685dc5f2c7064bc9152cd0678de058b8d41d523eb280a6187311e45",
+    "raw_title": "Entrega parcial.",
+    "raw_message": "Recebi apenas a Cadeira secretária giratória crepe verde bandeira. As Capas Para Colchão Casal Impermeáveis ainda não chegaram.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W29",
+    "review_id": "6ff9bab509f2532243acd7d652c0f598",
+    "review_score": 3,
+    "source_hash": "cebff33dbe4110a2b752fef45ce9ca3cd2805f74e23d9ce89353c53ca3038e45",
+    "raw_title": "",
+    "raw_message": "ok! muito bonito",
+    "route": "llm"
+  },
+  {
+    "sample_id": "W30",
+    "review_id": "ef2ad8304ff791bc56a7586cd228b97d",
+    "review_score": 1,
+    "source_hash": "91393f233b24d24a7f93a0c2efc38a6125f567a8aa25b7bcde2803dd755bf82e",
+    "raw_title": "",
+    "raw_message": "Não tenho como avaliar porque não recebi o produto, mas acredito ter sido por problema nos correios (greve de motoristas).",
+    "route": "llm"
+  }
+]

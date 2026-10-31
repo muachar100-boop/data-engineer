@@ -1,0 +1,98 @@
+{
+  "rows": 22754,
+  "rule_rows": 8610,
+  "model_unique_inputs": 13898,
+  "output_records": 22475,
+  "by_source": {
+    "rules_v8": 8507,
+    "gpt-4.1-mini-2025-04-14": 325,
+    "gpt-4o-mini-2024-07-18": 13643
+  },
+  "missing": 18,
+  "invalid": 0,
+  "missing_examples": [
+    {
+      "review_id": "6df539eeaf4e926c0779fa95a1fe9c8c",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "15a7d2219d15799cab383dd57fab5e82",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "3acd029958d6acc525a6d0b3888e9ec7",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "ef00c01556e69a80786308b35a36f2c6",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "3324992b38eb4e320e3dfb69bcf7ee57",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "65a7eb0d21c32eef818d59271c762543",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "2146ea344529ab38f2b82d8f90d63770",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "e4652f1bda612f9a73908f58554f4edd",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "4130539f0d7d4ffd3ac52a3a44127b24",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "bb8aa38cb2e86fcaefd7290477da7fdc",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "515da289d55287bc7bf45cc2fa1eda67",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "71174191641391b1cbdf5bbebb8ddbe9",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "aed44b83c1f193c825956e4824bf4de5",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "fc3e35dad52cfd73d253b71b87bf17c6",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "50417ae8c494d4510a2454dc1d8f35c5",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "557913c4b05824eddba95bc335edece5",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "3c96e6271ea6bf6540dcd267048e60b6",
+      "reason": "deadletter"
+    },
+    {
+      "review_id": "405fc62d193015989706c24f95eb0329",
+      "reason": "deadletter"
+    }
+  ],
+  "invalid_examples": [],
+  "requests": 3124,
+  "primary_requests": 2781,
+  "fallback_requests": 343,
+  "transport_errors": 1,
+  "input_tokens": 4689655,
+  "cached_tokens": 3178496,
+  "output_tokens": 1460441,
+  "run_cost_usd": 1.416496,
+  "wall_minutes": 28.0,
+  "note": "费用按公开单价与 usage 估算，不是账单核实；以 OpenAI 账单为准"
+}

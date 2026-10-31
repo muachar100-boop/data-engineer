@@ -18,8 +18,8 @@
 
 ## 方法：没有 ground truth 时怎么评
 
-1. **先封存标签，再看模型输出。** 每批先抽样、标注、记录哈希（`sealed_labels_manifest.json`），然后才发请求。分析脚本会核对哈希，标签在封存后被改过就拒绝运行。
-2. **判定规则在运行前登记。** 门槛和判定方式写在 `versions/v*/v*_plan.json` 里，状态是 `registered`，之后不改。结果不满意也不事后改门槛，要改只能换一批新样本。
+1. **先封存标签，再看模型输出。** 每批先抽样、标注、记录哈希（W、X 两批见 `evaluation/<批次>/sealed_labels_manifest.json`），然后才发请求。评估脚本会核对哈希，标签在封存后被改过就拒绝运行。
+2. **判定规则在运行前登记。** 门槛和判定方式在运行前写入计划文件，状态是 `registered`，之后不改（W、X 两批的原文见 `evaluation/<批次>/decision_rule.json`）。结果不满意也不事后改门槛，要改只能换一批新样本。
 3. **样本互相独立。** 每批固定随机种子，按文本长度四分位分层抽样，并按标准化文本排除以前所有批次（S、H、V、W、X 和探针 P）的重复内容。用来调过 Prompt 的样本就算开发数据，不再拿来声称“独立测试”。
 4. **同一批样本上放一个对照组。** 对照是 v6 + gpt-4.1-mini，用的样本和后处理都和候选一样，看的是候选和对照的差距，而不是只看绝对分数。
 5. **严格指标与人工接受分开报告。** 严格指标逐字段对比：类别集合、每个类别的最高严重度、情绪档位、可行动性。人工接受（审核人认为可以接受）单独列出，不混进严格指标。
@@ -76,9 +76,9 @@ H01–H10 是在 v6 情绪值下评的：类别 10/10，人工接受 9/10，严�
 ## 复现
 
 ```bash
-python q4_llm_extraction/versions/v8/run_v8.py --analyze     # W 批，三组
-python q4_llm_extraction/versions/v10/run_v10.py --analyze   # X 批（对照 X28 缺失，见 x28_robustness.py）
-python q4_llm_extraction/versions/v10/x28_robustness.py
+python q4_llm_extraction/evaluation/evaluate.py --check
 ```
 
-这三个命令都是离线运行，不发出 API 请求。
+离线运行，不发 API 请求，只用 `evaluation/` 目录里的数据：W、X 两批的样本、封存标签、登记的判定规则，以及各组模型的最终输出。脚本会核对标签哈希，逐条校验输出仍然通过引句校验，然后重算上面“结论”表、W 和 X 两批的各组结果、X28 的三种处理方式以及 Wilson 区间。加 `--check` 时，会断言这些数字与本文档一致。
+
+**可复现范围：** 只有 W、X 两批（结论的依据）可以在 main 上复现。S、H、V 三批和换模型小试是开发过程的历史结果，原始数据和脚本保存在开发分支 `q4-llm-extraction-final` 的 `versions/`、`round3_cost_optimization/`、`model_trial/` 下，main 上不能复现。

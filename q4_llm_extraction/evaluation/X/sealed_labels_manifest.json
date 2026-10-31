@@ -1,0 +1,10 @@
+{
+  "status": "human_labels_sealed_before_any_model_run",
+  "labels_sha256": "af38d698c3b30dc2368f85308b3e89877c5dde008ea45cfe9d5586167d274c14",
+  "samples_sha256": "9711686847ef52e746c02662cc10f8f1bb3b9416c7c7f52bf63ba80598dc5387",
+  "v10_manifest_sha256": "ce947812bdc38273766a2d6c7ba214d2410ee4b579b6f4c07d164d19c5073b2e",
+  "provenance": "AI辅助人工审核：Claude 仅依据原文起草四字段、证据与翻译（任何 v10 模型运行之前），审核人逐条确认或修改；非完全独立人工盲标",
+  "reviewer": [
+    "Cecelia"
+  ]
+}

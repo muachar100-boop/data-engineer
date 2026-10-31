@@ -16,6 +16,7 @@
     python q4_llm_extraction/extract_reviews.py               # 离线：分流统计、请求计划与预估，不读 Key
     python q4_llm_extraction/extract_reviews.py --live        # 付费全量（可中断后续跑，已完成批次不重发）
     python q4_llm_extraction/extract_reviews.py --assemble    # 离线：由结果缓存生成 extracted_issues.json
+    python q4_llm_extraction/extract_reviews.py --cost        # 离线：由 full_run/events.jsonl 重算成本分项
 API Key 从环境变量 OPENAI_API_KEY 或仓库根目录 .env 读取，从不打印。
 """
 import argparse
@@ -530,12 +531,49 @@ def assemble_offline():
     return {k: v for k, v in report.items() if not k.endswith('examples')}
 
 
+def cost_summary(state=STATE):
+    """离线：由 full_run/events.jsonl（逐请求 usage）重算 cost_report.md 中的全量费用分项。"""
+    events = read_jsonl(state / 'events.jsonl')
+    if not events:
+        raise FileNotFoundError('没有 full_run/events.jsonl')
+    rows = {}
+    for e in events:
+        k = 'transport_error' if e.get('error') and not e.get('usage') else e['kind']
+        r = rows.setdefault(k, dict(requests=0, reviews=0, input_tokens=0, cached_tokens=0, output_tokens=0, cost_usd=0.0))
+        u = e.get('usage') or {}
+        r['requests'] += 1
+        r['reviews'] += len(e.get('sample_ids', [])) if u else 0
+        r['input_tokens'] += u.get('prompt_tokens', 0)
+        r['cached_tokens'] += (u.get('prompt_tokens_details') or {}).get('cached_tokens', 0) or 0
+        r['output_tokens'] += u.get('completion_tokens', 0)
+        r['cost_usd'] += e['cost_usd']
+    for k, r in rows.items():
+        r['cost_usd'] = round(r['cost_usd'], 4)
+        if r['reviews']:
+            r['per_review_usd'] = round(r['cost_usd'] / r['reviews'], 7)
+            r['input_tokens_per_review'] = round(r['input_tokens'] / r['reviews'], 1)
+            r['output_tokens_per_review'] = round(r['output_tokens'] / r['reviews'], 1)
+    p = rows['primary']
+    p['cost_without_cache_usd'] = round((p['input_tokens'] * PRIMARY['input_rate'] + p['output_tokens'] * PRIMARY['output_rate']) / 1e6, 4)
+    total = round(sum(e['cost_usd'] for e in events), 4)
+    first = json.loads((state / 'meta.json').read_text())['first_request_at']
+    return dict(by_kind=rows, run_cost_usd=total, dev_commitment_usd=DEV_COMMITMENT_USD,
+                total_with_dev_usd=round(total + DEV_COMMITMENT_USD, 4),
+                per_low_score_review_usd=round(total / 22754, 7), per_model_input_usd=round(total / 13898, 7),
+                wall_minutes=round((max(e['at'] for e in events) - first) / 60, 1),
+                note='按公开单价与 usage 估算，不是账单核实；以 OpenAI 账单为准')
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--live', action='store_true')
     ap.add_argument('--assemble', action='store_true')
+    ap.add_argument('--cost', action='store_true', help='离线：由 full_run/events.jsonl 重算成本分项')
     ap.add_argument('--rerun', action='store_true', help='确认在没有 full_run/ 缓存时重新付费跑全量')
     a = ap.parse_args()
+    if a.cost:
+        print(json.dumps(cost_summary(), ensure_ascii=False, indent=2))
+        return
     if a.assemble:
         print(json.dumps(assemble_offline(), ensure_ascii=False, indent=2))
         return

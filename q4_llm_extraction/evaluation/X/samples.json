@@ -1,0 +1,272 @@
+[
+  {
+    "sample_id": "X01",
+    "review_id": "b1d260515cd7d35e2fb4c8c389ecec0e",
+    "review_score": 1,
+    "source_hash": "863d267e2c01d347f9133b409cd35c779da954394b1ff9a62935f541ffe46da5",
+    "raw_title": "",
+    "raw_message": "Até o presente momento o produto não foi entregue dentro do prazo.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X02",
+    "review_id": "e83991185608aff281b0902896cbfb48",
+    "review_score": 2,
+    "source_hash": "d2cc70ef9b47a184c652541720afc3b8b7005ee37496a07371610543410b4b82",
+    "raw_title": "",
+    "raw_message": "O produto foi produzido a muito tempo atrás, sobrando pouco tempo de validade quando ele foi entregue.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X03",
+    "review_id": "0dc592136d4b2753628f84a5cffcdd9c",
+    "review_score": 1,
+    "source_hash": "9c8dc95968957744247290ac58bce98e3ccb1aae408f5b66457b994335f88798",
+    "raw_title": "",
+    "raw_message": "O produto não corresponde às expectativas. A qualidade é muito aquém da descrição do produto.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X04",
+    "review_id": "0b77e1f916354b8c96d32d31ea3b9cf1",
+    "review_score": 3,
+    "source_hash": "0fdb472bb8db25bb3cc45a4726c53b4bc6866afbd7f79d7f41f4c980270e631e",
+    "raw_title": "",
+    "raw_message": "Entrega muito rápida",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X05",
+    "review_id": "f2395ab617ccf04f0c89abfd9f0334b1",
+    "review_score": 1,
+    "source_hash": "09e96861c8ef43dac3079482ac22b738d1d3a463515a628fa5782bf23e475a30",
+    "raw_title": "Informação\\preocupada",
+    "raw_message": "Minha avaliação ta sendo esta pq aqui aparece q recebi o produto e ainda não chegou em casa.Por favor, queria saber o q está acontecendo ???\r\nAtenciosamente, \r\nJuliana",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X06",
+    "review_id": "d999efbe30333f72b2fcf3a37df5a41b",
+    "review_score": 1,
+    "source_hash": "fc1b64df5adc074c73006e3121db1bf8f0f81292367dd405bd68683ad2a7c3c0",
+    "raw_title": "",
+    "raw_message": "Bom dia, este produto já passou da data prevista de entrega, não recomendo está loja, aguardo retorno",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X07",
+    "review_id": "55df61f6c8a6fc523c0362cd4d10983c",
+    "review_score": 3,
+    "source_hash": "5f9f2ac5485bcca9e2101b7eed0800175e497df997d983b730a23c7b7d9bebc1",
+    "raw_title": "",
+    "raw_message": "Achei q demorou muito ",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X08",
+    "review_id": "b11733433d033ae9a8c3045c36daecd2",
+    "review_score": 1,
+    "source_hash": "b2f1eb802d6e98dbbd37b13f1e7a2c8c16b4e7e13192c23bb29caaa964d7339b",
+    "raw_title": "",
+    "raw_message": "Já faz um tempo que comprei o produto e está ocorrendo problema na entrega e a loja não me ajuda, respondendo automaticamente à uma pergunta que não corresponde ao que eu perguntei.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X09",
+    "review_id": "9f48f59d16b8a8bc0ba9989ca60c95f4",
+    "review_score": 3,
+    "source_hash": "dcdef814569e353b9aa53b8ee10ef05ac7636d909a55e63af73f8b6ed9b22a45",
+    "raw_title": "",
+    "raw_message": "ficou pequena, apertada",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X10",
+    "review_id": "b19b3da265d2e2d3f4f18fd77bbba111",
+    "review_score": 1,
+    "source_hash": "5e1562905429fd2c6581704e1142dc6aad28c2a7dc804140dc8c6aea891d6fe7",
+    "raw_title": "",
+    "raw_message": "O produto chegou com a tampa quebrada, de quem é o prejuizo?",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X11",
+    "review_id": "454f3b7fced01704438ba23960d261cd",
+    "review_score": 1,
+    "source_hash": "e1c6d78ac5565598cf7e854bd6d8b9e99cce2945b095994b3d2e42529e28e195",
+    "raw_title": "",
+    "raw_message": "Já comprei várias vezes na Americana só que dessa vez demorou de mais sempre recibi meus produtos antes do prazo mais dessa vez demorou de mais chegou dois dias antes do prazo,mais demorou demais ",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X12",
+    "review_id": "487f8ff16eaf366dc7c01652202048c3",
+    "review_score": 1,
+    "source_hash": "b93cbbbca20d37a1ddc9b425239938b9005f4dee09fc7f23f8ad308d9aecd2a3",
+    "raw_title": "",
+    "raw_message": "Chegou apenas uma peça, mas na nota e na garantia constam as duas joias.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X13",
+    "review_id": "4f8d53523919d0b48777d33e3394e08f",
+    "review_score": 1,
+    "source_hash": "04b81ebe314db0de32b692e98495c47795990cc035bbd16eeebde67f4232b707",
+    "raw_title": "",
+    "raw_message": "não recebi o produto, não tenho o que avaliar.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X14",
+    "review_id": "b1215b7be082fef3dd617160eeb991d5",
+    "review_score": 1,
+    "source_hash": "63d92cc2fe0bea99adf66d826c52633c665860517013ffcd699697b8883249eb",
+    "raw_title": "",
+    "raw_message": "Um dos relogios veio aberto sem tampa e sem funcionar não recomendo a ninguem essa empresa",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X15",
+    "review_id": "9c68463bb53ebb4b4973910aa823d2bd",
+    "review_score": 3,
+    "source_hash": "bd6196d6eae7f9484e6b77761037338ce8946ac4f75dac40554dc6fd276798b0",
+    "raw_title": "",
+    "raw_message": "boa tarde\r\naté o momento nao recebi o material",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X16",
+    "review_id": "aa8d8879ec582aa121f6b4d8b7aa6e30",
+    "review_score": 1,
+    "source_hash": "1a023a128a395a839bc385eb775abacb9a007a47633b1c6b26130ea52ed5b47d",
+    "raw_title": "pessimo",
+    "raw_message": "Tive que pegar nos correios, e na caixa só havia uma cadeira sendo que eu comprei duas!!! Vou processar!",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X17",
+    "review_id": "ec99334c7b48e6561a2b38d94ab91821",
+    "review_score": 3,
+    "source_hash": "b5d4f471ec2781237a840b50de07f46887a196ffbe41e25645f8e05fe2ae3f7a",
+    "raw_title": "entrega demorada",
+    "raw_message": "recebi dentro do prazo e correto, porem poderia ser mais rápido este atendimento.\r\ndo resto ok",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X18",
+    "review_id": "df4e1e05fa40b3fff7574e386f904afd",
+    "review_score": 1,
+    "source_hash": "15ca562d3df3b4b1c2b4479779556829d71bc393d75e183ae0a070dd091361e8",
+    "raw_title": "",
+    "raw_message": "Até o presente momento não recebi o produto e não entraram em contato comigo para dar alga satisfação e fazer o reembolso.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X19",
+    "review_id": "d7cedeef2e446abdc321427c1c742534",
+    "review_score": 3,
+    "source_hash": "c0707c363964e2a1099e00317e4a43524f9208610abdf862a88ef8b790b92a5b",
+    "raw_title": "Não posso opinar",
+    "raw_message": "Não posso opinar não usei ainda!",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X20",
+    "review_id": "63d8395f1a1c28c54b5daad54a50622f",
+    "review_score": 1,
+    "source_hash": "8224f8cee9574b48a3aa140b05f891d05d0b5094ef7240ecda1486235a447c92",
+    "raw_title": "Péssima qualidade ",
+    "raw_message": "Comprei pensando q seria igual a foto quando chegou totalmente diferente",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X21",
+    "review_id": "5a5d362c8809f9b273537ac1a2283301",
+    "review_score": 3,
+    "source_hash": "dfa52ff8c3fb0b3b37989282bc17f0f6b731dd04c5f86f7ab391e006ca9470be",
+    "raw_title": "",
+    "raw_message": "O comprimento do parafuso é maior que o original e ficou um pouco para fora da roda, na minha opinião deveria acompanhar as medidas dos parafusos originais. ",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X22",
+    "review_id": "c04f014737030c452713c078e9156de6",
+    "review_score": 3,
+    "source_hash": "595147a067cea02fe8af4f8f78a79b0e7f48ee125e7bceba80759139a05b914b",
+    "raw_title": "",
+    "raw_message": "Os dois fones vieram com defeito. Um dos lados não funciona.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X23",
+    "review_id": "50159d6f192b0273ebea2d9e1382640c",
+    "review_score": 1,
+    "source_hash": "499c288f0c1a4bfccb1b42379d14437cf83f3f8bae296726f3451fceb7a369ba",
+    "raw_title": "",
+    "raw_message": "Pois comprei um conjunto de 8 toalhas de banho, que cada uma era de cores diferentes, mais na verdade vieram 3 das cores verdes, 3 das cores laranja e 2 brancas",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X24",
+    "review_id": "5549df8c639a8a3eedb03bcbf7b0e7e3",
+    "review_score": 3,
+    "source_hash": "a4230c97317ff09f264389b80307973d20ca4b42dd3c5781284974c7652b4d26",
+    "raw_title": "",
+    "raw_message": "Não recebi o material, logo não irei avaliar.",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X25",
+    "review_id": "d680f26e27023bd7b495589581ef7b7d",
+    "review_score": 1,
+    "source_hash": "a588922de4e1287a885b333d803ea21a10de402a176ef32e43c3d53613060871",
+    "raw_title": "",
+    "raw_message": "comprei um lençol de solteiro e a loja me enviou um lençol de casal. Solicito a troca",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X26",
+    "review_id": "0860c33044549e03b2f45d348a92fba0",
+    "review_score": 3,
+    "source_hash": "0b0dd0020b06414963688d32a451468480e457a66d556969d16efe0dd20e837b",
+    "raw_title": "Demora na entrega",
+    "raw_message": "sei que isso é culpa do correios q é uma porcaria estatal do Brasil mas é a unica reclamação quanto ao produto tudo ok",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X27",
+    "review_id": "df62ed0d57cd267d1965d9c109dd055f",
+    "review_score": 1,
+    "source_hash": "98e935abee506161d92f123fc8aa305173ea40eccaffa30a62247c0a0924322e",
+    "raw_title": "",
+    "raw_message": "Até o momento, a entrega do produto ainda não foi feita e está atrasada, portanto não posso avaliá-lo. Último status dos Correios: \"Objeto ainda não chegou à unidade de Viana-ES. Por favor, aguarde.\"",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X28",
+    "review_id": "6217fb5bbfd21073a74bce0d81e7e47b",
+    "review_score": 1,
+    "source_hash": "12a0aa7844fe129db9388871f93c28ff058a4d5b4aef1dfa4a25d823fe873d08",
+    "raw_title": "",
+    "raw_message": "Foi comprado 2 unidades e só veio uma, mandei 4 email pro vendedor e até agora sem resposta",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X29",
+    "review_id": "244237a47b93454f625fbee1017e3585",
+    "review_score": 3,
+    "source_hash": "b6d6b3f57d0eb81e3eadb52b03b79b29c608032be31899b2c7683a133a749bd7",
+    "raw_title": "",
+    "raw_message": "Demorou muito para chegar o produto ",
+    "route": "llm"
+  },
+  {
+    "sample_id": "X30",
+    "review_id": "b2c926d8be40e25503a360a53078aea3",
+    "review_score": 3,
+    "source_hash": "8b149f4c4d899c806a0d966393f6f7f34e45cc2e534c5b7b70394ba235afb175",
+    "raw_title": "",
+    "raw_message": "Boa Noite, nao consegui colocar a bandeja no triple, pois nao sei e nao veio manual como colocar e nao sei como instalar a bandeja no meio do triple, peço um manual de nstalar..Grata...Ilsa Duarte",
+    "route": "llm"
+  }
+]

@@ -98,6 +98,15 @@ class ExtractTests(unittest.TestCase):
         finally:
             er.STATE, er.OUTPUT, sys.argv = old_state, old_out, old_argv
 
+    @unittest.skipUnless((er.STATE / 'events.jsonl').exists(), '没有 full_run/events.jsonl')
+    def test_cost_summary_matches_run_report(self):
+        c = er.cost_summary()
+        report = json.loads((er.STATE / 'report.json').read_text())
+        self.assertEqual(round(c['run_cost_usd'], 4), round(report['run_cost_usd'], 4))
+        self.assertEqual(c['by_kind']['primary']['requests'] + c['by_kind']['fallback']['requests']
+                         + c['by_kind']['transport_error']['requests'], report['requests'])
+        self.assertEqual(c['by_kind']['primary']['reviews'], report['model_unique_inputs'])
+
     def test_split_counts(self):
         self.assertEqual(len(RECORDS), 22754)
         self.assertEqual(len(RULES), 8610)
