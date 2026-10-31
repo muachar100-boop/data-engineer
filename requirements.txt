@@ -1,45 +1,28 @@
 # ============================================================
 # 数据工程师笔试 - Python 依赖
 # ============================================================
-# 你可以根据自己的方案增删依赖，但请保证 requirements.txt 是
-# 最终代码实际所需的依赖（不要保留没用到的包）
-# 
+# 只保留最终代码实际 import 的第三方包；下限版本为本机验证环境
+# （conda 环境 gekko-de，Python 3.11）实际安装版本的主版本。
+#
 # 建议环境：Python 3.10+
 # 安装：pip install -r requirements.txt
 # ============================================================
 
-# 数据处理核心
+# 数据处理核心（Q1 / Q3 / Q5）
 pandas>=2.0.0
 numpy>=1.24.0
-pyarrow>=14.0.0          # 用于读写 parquet
+pyarrow>=14.0.0          # Q3 读写 parquet
 
-# 数据库 / SQL（本试卷强制使用 MySQL 8.0+，不允许用 DuckDB / SQLite 代替）
-sqlalchemy>=2.0.0        # 用 to_sql 灌数据 / 执行查询
-pymysql>=1.1.0           # MySQL 8 驱动（纯 Python，免编译）
+# 数据库 / SQL（本试卷强制使用 MySQL 8.0+）
+pymysql>=1.1.0           # Q2 导入 Olist 与执行 SQL（纯 Python，免编译）
 cryptography>=42.0.0     # MySQL 8 默认 caching_sha2_password 认证需要
+python-dotenv>=1.0.0     # 从 .env 读取 MySQL 连接信息
 
-# 数据集下载（如果需要从网络拉数据）
-ucimlrepo>=0.0.3         # 拉 UCI Online Retail II
-kagglehub>=0.2.0         # 拉 Kaggle 数据集（可选）
+# 数据集下载
+kagglehub>=0.2.0         # download_data.py 拉取两个 Kaggle 数据集
 
-# LLM API（任选）
-openai>=1.0.0            # OpenAI API
-anthropic>=0.20.0        # Claude API
-# tiktoken>=0.5.0        # OpenAI tokenizer（计算成本时有用）
+# 可视化
+matplotlib>=3.7.0        # Q1 国家分布对比图
 
-# 文本处理（模块 4 可能用到）
-langdetect>=1.0.9        # 语言检测，用于过滤葡萄牙语
-# deep-translator>=1.11.0  # 翻译（可选）
-
-# 数据校验与测试
-pydantic>=2.0.0          # JSON schema 校验（LLM 输出验证）
-pytest>=7.0.0            # 单元测试
-
-# 工具类
-python-dotenv>=1.0.0     # 加载 .env 中的 API key
-tqdm>=4.66.0             # 进度条
-loguru>=0.7.0            # 日志（可选，比标准 logging 好用）
-
-# 可视化（可选）
-matplotlib>=3.7.0
-seaborn>=0.12.0
+# 说明：Q4 调用 OpenAI API 用的是标准库 urllib，不需要 openai SDK；
+#       Q4 单元测试用标准库 unittest，不需要 pytest。

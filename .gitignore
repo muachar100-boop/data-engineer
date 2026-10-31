@@ -57,6 +57,7 @@ data/Brazilian E-Commerce*/
 run_all_*.log
 q3_etl_pipeline/outputs/*.parquet
 q3_etl_pipeline/pipeline_log.txt
+q2_sql_analysis/import_report.json
 !q3_etl_pipeline/outputs/.gitkeep
 
 # ============================================================
