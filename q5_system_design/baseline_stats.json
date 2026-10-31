@@ -1,0 +1,72 @@
+{
+  "reviews": {
+    "reviews": 99224,
+    "reviews_per_order": 0.9978,
+    "has_text_rate": 0.4127,
+    "low_score_rate(<=3)": 0.2293,
+    "low_score_and_text_rate": 0.1456,
+    "very_low_score_and_text_rate(<=2)": 0.1097,
+    "low_text_count": 14445,
+    "low_text_short_share(<=3词)": 0.0708,
+    "low_text_exact_dup_share": 0.0583,
+    "low_text_need_llm_rate_of_all_reviews": 0.1353
+  },
+  "delivery": {
+    "delivered_orders": 96470,
+    "late_rate_timestamp(Q2口径)": 0.0811,
+    "late_rate_by_day": 0.0677,
+    "estimated_date_is_midnight_share": 1.0,
+    "seller_handoff_late_rate": 0.0907,
+    "open_orders_overdue_at_snapshot": 1737,
+    "status_distribution": {
+      "delivered": 96478,
+      "shipped": 1107,
+      "canceled": 625,
+      "unavailable": 609,
+      "invoiced": 314,
+      "processing": 301,
+      "created": 5,
+      "approved": 2
+    }
+  },
+  "volume": {
+    "orders": 99441,
+    "avg_milestone_events_per_order": 3.951,
+    "stable_period_avg_orders_per_day": 192.0,
+    "peak_day_over_avg_day": 6.13,
+    "peak_day": "2017-11-24",
+    "peak_hour_over_avg_hour": 12.99,
+    "hour_of_day_share_max": 0.0671
+  },
+  "llm_cost_1m_per_day": {
+    "per_call_usd": 0.00031427,
+    "daily_orders": 1000000,
+    "tiers": {
+      "A_全部评价过LLM": {
+        "calls_per_day": 997800,
+        "usd_per_day": 313.58,
+        "usd_per_year": 114455
+      },
+      "B_只处理有文本": {
+        "calls_per_day": 411792,
+        "usd_per_day": 129.41,
+        "usd_per_year": 47236
+      },
+      "C_只处理<=3星且有文本": {
+        "calls_per_day": 145280,
+        "usd_per_day": 45.66,
+        "usd_per_year": 16665
+      },
+      "D_再剔除<=3词短评": {
+        "calls_per_day": 135002,
+        "usd_per_day": 42.43,
+        "usd_per_year": 15486
+      },
+      "E_再去重(精确重复)": {
+        "calls_per_day": 127132,
+        "usd_per_day": 39.95,
+        "usd_per_year": 14583
+      }
+    }
+  }
+}
