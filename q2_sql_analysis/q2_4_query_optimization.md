@@ -33,7 +33,7 @@ ORDER BY revenue DESC;
 
 ## 第 2 问：优化 SQL 与索引
 
-可运行查询见 `q2_4_optimized.sql`：
+可运行的优化查询如下：
 
 ```sql
 -- Q2.4：MySQL 8.0+，只读查询；先筛选，再将两个一对多表分别压到订单粒度。
@@ -95,7 +95,7 @@ ORDER BY revenue DESC, f.customer_state;
 
 CTE 表达逻辑阶段，不保证 MySQL 一定按书写顺序执行或物化；实际合并、物化、扫描方式需通过 EXPLAIN ANALYZE 验证。该查询依赖 orders.order_id 和 customers.customer_id 唯一，验证后才能安全用 COUNT(*)。
 
-可选索引见 `q2_4_indexes.sql`，当前 LONGTEXT 原始表使用前缀索引：
+可选索引如下，当前 LONGTEXT 原始表使用前缀索引：
 
 ```sql
 -- 可选索引建议，需手动执行；本文件不是查询运行的前置强制步骤。
