@@ -73,7 +73,7 @@
 | v10 | 4o-mini 非劣效验证，holdout X（两组） | $0.0125 |
 | **合计** | | **$0.3013** |
 
-这一节的数字来自开发阶段各版本的请求账本（v2–v10 的逐版本 token 明细和第三轮成本报告）。这些账本保存在开发分支 `q4-llm-extraction-final` 的 `versions/`、`round3_cost_optimization/`、`model_trial/` 下，不在 main 上，所以在 main 上**不能复现**；交付代码里以常量 `DEV_COMMITMENT_USD` 记录这个合计。
+这一节的数字来自开发阶段各版本的请求账本（v2–v10 的逐版本 token 明细和第三轮成本报告）。这些账本没有纳入本仓库，所以在仓库里**不能复现**；交付代码里以常量 `DEV_COMMITMENT_USD` 记录这个合计。
 
 ## 批处理：单条与批量的成本对比
 

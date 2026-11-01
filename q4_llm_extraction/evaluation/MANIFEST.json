@@ -1,5 +1,5 @@
 {
-  "source": "分支 q4-llm-extraction-final 的 versions/v8（W）与 versions/v10（X）；标签哈希与运行前封存的 manifest 一致",
+  "source": "开发阶段 v8（W 批）与 v10（X 批）实验目录的导出；标签哈希与运行前封存的 manifest 一致",
   "sha256": {
     "W": {
       "decision_rule.json": "5eda3b2bfb75fdbf45dfd4faf7f66ce4fe5d3c0ff4c217e691677e612dd6c3bf",

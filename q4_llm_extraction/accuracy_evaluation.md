@@ -81,4 +81,4 @@ python q4_llm_extraction/evaluation/evaluate.py --check
 
 离线运行，不发 API 请求，只用 `evaluation/` 目录里的数据：W、X 两批的样本、封存标签、登记的判定规则，以及各组模型的最终输出。脚本会核对标签哈希，逐条校验输出仍然通过引句校验，然后重算上面“结论”表、W 和 X 两批的各组结果、X28 的三种处理方式以及 Wilson 区间。加 `--check` 时，会断言这些数字与本文档一致。
 
-**可复现范围：** 只有 W、X 两批（结论的依据）可以在 main 上复现。S、H、V 三批和换模型小试是开发过程的历史结果，原始数据和脚本保存在开发分支 `q4-llm-extraction-final` 的 `versions/`、`round3_cost_optimization/`、`model_trial/` 下，main 上不能复现。
+**可复现范围：** 只有 W、X 两批（结论的依据）可以在 main 上复现。S、H、V 三批和换模型小试是开发过程的历史结果，它们的原始数据和实验脚本没有纳入本仓库，所以在仓库里不能复现，只作为过程记录。
