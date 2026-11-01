@@ -270,10 +270,10 @@ def q12_extremes(data):
     linked = positive.merge(negative, on=["Customer ID", "StockCode", "Price"], suffixes=("_正", "_负"))
     for row in linked.itertuples(index=False):
         minutes = (pd.Timestamp(row.InvoiceDate_负) - pd.Timestamp(row.InvoiceDate_正)).total_seconds() / 60
-        sections.append(f"关联证据：同客户、同商品、同单价，时间间隔 {minutes:g} 分钟，合计金额 {row.Amount_正 + row.Amount_负:.2f}，支持取消/冲销解释；初始大额下单是否录入错误仍需确认。")
+        sections.append(f"关联证据：同客户、同商品、同单价，时间间隔 {minutes:g} 分钟，合计金额 {row.Amount_正 + row.Amount_负:.2f}，估计是录入错误后马上冲销，但没有订单系统或业务方的证据，原因尚未确认。")
     sections += ["### 负价格完整记录", table(data.loc[data["Price"].lt(0), cols]),
                  "负价格记录均为 A 前缀、StockCode B、Description 为 Adjust bad debt、Quantity 为1、Customer ID缺失、Country为United Kingdom，因此属于销售坏账财务调整。",
-                 "**极端值处理建议**：C 类异常极值在确认确为错误交易及其取消冲销后，可从下游有效销售明细中删除对应的正负交易对；确认前保留。不能仅删除负向 C 行而保留原正向销售，否则会高估销售额。正常退款 C 记录仍按第1节如实参与净额计算。A 类坏账财务调整不可删除，应保留用于财务审计，并与商品销售额分开统计。本次不执行任何删除。",
+                 "**极端值处理建议**：C 类异常极值虽然估计是录入错误后冲销，但在详细确认原因之前一律保留（Q3 也按此口径保留并打标记）；确认确为错误交易后，才从下游有效销售明细中成对删除正负两笔。不能仅删除负向 C 行而保留原正向销售，否则会高估销售额。正常退款 C 记录仍按第1节如实参与净额计算。A 类坏账财务调整不可删除，应保留用于财务审计，并与商品销售额分开统计。本次不执行任何删除。",
                  "支持代码：`q12_extremes()`，使用 isin、merge 和时间差核对关联，不再输出关联宽表或同代码调整表。"]
     return sections
 
