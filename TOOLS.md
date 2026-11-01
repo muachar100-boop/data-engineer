@@ -100,9 +100,9 @@
 
 ## 🔍 调试与分析工具
 
-- **unittest（标准库）**：`q4_llm_extraction/test_extract_reviews.py` 共 13 个离线测试，用测试桩代替 API（不联网、不读 Key），覆盖批量解析、引句修复、兜底、死信、重试、续跑不重复付费等路径；`run_all.py` 每次都会跑
+- **unittest（标准库）**：`q4_llm_extraction/test_extract_reviews.py` 共 14 个离线测试，用测试桩代替 API（不联网、不读 Key），覆盖批量解析、引句修复、兜底、死信、重试、续跑不重复付费等路径；`run_all.py` 每次都会跑
 - **assert 断言**：Q3 `validate_datasets` 对三个输出做断言（销售金额为正、客户唯一、recency 非负、退货匹配键/时间/同价、累计退货数量不超过原单、RFM 金额与销售对账），并把 parquet 回读后与内存表完整比较
-- **EXPLAIN ANALYZE**：Q2.4 的验证方法（见 `q2_4_query_optimization.md` 第 3 节）
+- **EXPLAIN ANALYZE**：Q2.4 实测原查询与优化查询（见 `q2_4_query_optimization.md` 第 2 问“实测结果”）。它发现第一版优化查询的评价去重 CTE 被按 `rn` 建自动索引、嵌套循环 20,367 次，耗时 22 秒；修正后约 1.4 秒（原查询约 0.6 秒）
 - **SHA256 指纹**：Q2 导入前后对 CSV 和 MySQL 表各算一次“行数 + 每行哈希之和”的无序指纹，证明没有丢行、改值；Q3 运行前后校验原始 CSV 未被改动；Q4 校验 Prompt 与冻结版本一致
 
 ---
@@ -137,4 +137,4 @@
 
 - **从一开始就锁定精确版本**：`requirements.txt` 已删掉模板里没用到的包（sqlalchemy、openai、anthropic、langdetect、pydantic、pytest、tqdm、loguru、seaborn、ucimlrepo），但仍是宽松下限；会改成 `pip freeze` 出的精确版本，或者用 uv 锁文件。
 - **Q2 导入后建一层带类型和主键的分析表**，而不是每条查询都在 LONGTEXT 上 `CAST`；Q2.3 这种多表聚合能从分钟级降下来。
-- **Q4 实验脚本从一开始就纳入 Git**：`versions/`、`bert_pilot/` 等实验目录现在只剩缓存文件，`accuracy_evaluation.md` 里的复现命令已经跑不了。
+- **Q4 实验脚本从一开始就纳入 Git**：`versions/`、`bert_pilot/` 等实验目录没有纳入仓库，所以 S、H、V 批和开发阶段成本账本在仓库里不能复现（`accuracy_evaluation.md`、`cost_report.md` 已注明）；作为结论依据的 W、X 两批评估和全量成本可以用 `evaluate.py --check`、`extract_reviews.py --cost` 离线复现。
