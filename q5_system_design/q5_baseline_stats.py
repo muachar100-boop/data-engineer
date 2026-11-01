@@ -61,6 +61,8 @@ def review_stats(reviews: pd.DataFrame, n_orders: int) -> dict:
         "low_text_count": int(len(low_text)),
         "low_text_short_share(<=3词)": round(words.le(SHORT_WORDS).mean(), 4),
         "low_text_exact_dup_share": round(norm.duplicated().mean(), 4),
+        # 去重率要在剔除短评之后的集合上算：短评重复最多，混在一起算会把短评扣两次
+        "low_text_long_exact_dup_share": round(norm[words.gt(SHORT_WORDS)].duplicated().mean(), 4),
         "low_text_need_llm_rate_of_all_reviews": round(
             (low & has_text).sum() * (1 - words.le(SHORT_WORDS).mean()) / n, 4),
     }
@@ -103,6 +105,9 @@ def volume_stats(orders: pd.DataFrame) -> dict:
     hourly = stable.dt.floor("h").value_counts()
     hours = pd.date_range(stable.min().floor("h"), stable.max().floor("h"), freq="h")
     hourly = hourly.reindex(hours, fill_value=0)
+    minutes = pd.date_range(stable.min().floor("min"), stable.max().floor("min"), freq="min")
+    per_minute = stable.dt.floor("min").value_counts().reindex(minutes, fill_value=0)
+    peak_hour = hourly.idxmax()
     return {
         "orders": int(len(orders)),
         "avg_milestone_events_per_order": round(milestones.mean(), 3),
@@ -110,6 +115,12 @@ def volume_stats(orders: pd.DataFrame) -> dict:
         "peak_day_over_avg_day": round(daily.max() / daily.mean(), 2),
         "peak_day": str(daily.idxmax().date()),
         "peak_hour_over_avg_hour": round(hourly.max() / hourly.mean(), 2),
+        # 最高小时来自一次几分钟的集中下单，单看最大值会夸大容量需求，所以同时给 P99 和按分钟的峰值
+        "peak_hour": str(peak_hour),
+        "peak_hour_orders": int(hourly.max()),
+        "peak_hour_busiest_minutes": {str(k): int(v) for k, v in per_minute[peak_hour:peak_hour + pd.Timedelta("59min")].nlargest(5).items()},
+        "p99_hour_over_avg_hour": round(hourly.quantile(0.99) / hourly.mean(), 2),
+        "peak_minute_over_avg_minute": round(per_minute.max() / per_minute.mean(), 1),
         "hour_of_day_share_max": round(ts.dt.hour.value_counts(normalize=True).max(), 4),
     }
 
@@ -123,7 +134,7 @@ def cost_projection(r: dict, daily_orders: int = 1_000_000) -> dict:
         "C_只处理<=3星且有文本": reviews_day * r["low_score_and_text_rate"],
         "D_再剔除<=3词短评": reviews_day * r["low_text_need_llm_rate_of_all_reviews"],
         "E_再去重(精确重复)": reviews_day * r["low_text_need_llm_rate_of_all_reviews"]
-                               * (1 - r["low_text_exact_dup_share"]),
+                               * (1 - r["low_text_long_exact_dup_share"]),
     }
     return {
         "per_call_usd": round(per_call, 8),

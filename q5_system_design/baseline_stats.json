@@ -9,6 +9,7 @@
     "low_text_count": 14445,
     "low_text_short_share(<=3词)": 0.0708,
     "low_text_exact_dup_share": 0.0583,
+    "low_text_long_exact_dup_share": 0.032,
     "low_text_need_llm_rate_of_all_reviews": 0.1353
   },
   "delivery": {
@@ -36,6 +37,17 @@
     "peak_day_over_avg_day": 6.13,
     "peak_day": "2017-11-24",
     "peak_hour_over_avg_hour": 12.99,
+    "peak_hour": "2018-08-02 12:00:00",
+    "peak_hour_orders": 104,
+    "peak_hour_busiest_minutes": {
+      "2018-08-02 12:06:00": 28,
+      "2018-08-02 12:05:00": 26,
+      "2018-08-02 12:07:00": 22,
+      "2018-08-02 12:04:00": 11,
+      "2018-08-02 12:13:00": 2
+    },
+    "p99_hour_over_avg_hour": 3.37,
+    "peak_minute_over_avg_minute": 209.9,
     "hour_of_day_share_max": 0.0671
   },
   "llm_cost_1m_per_day": {
@@ -63,9 +75,9 @@
         "usd_per_year": 5285
       },
       "E_再去重(精确重复)": {
-        "calls_per_day": 127132,
-        "usd_per_day": 13.64,
-        "usd_per_year": 4977
+        "calls_per_day": 130682,
+        "usd_per_day": 14.02,
+        "usd_per_year": 5116
       }
     }
   }
