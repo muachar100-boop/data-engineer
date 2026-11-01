@@ -427,7 +427,7 @@ def compute_rfm(sales: pd.DataFrame, returns: pd.DataFrame, reference_date) -> p
         unmatched_refund_amount=('refund_amount', 'sum'), unmatched_return_rows=('source_row', 'size'))
     features = features.join(unmatched)
     features[['unmatched_refund_amount', 'unmatched_return_rows']] = features[['unmatched_refund_amount', 'unmatched_return_rows']].fillna(0)
-    # 大额已由用户确认真实，保留统计标记，但不因此将客户判为异常。
+    # 大额估计是录入错误后冲销，但原因未确认前保留；只作统计标记，不因此将客户判为异常。
     features['has_anomaly'] = (features.duplicate_sales_rows.gt(0) | features.ambiguous_return_rows.gt(0)
         | features.unmatched_return_rows.gt(0) | features.country_count.gt(1))
     for col in ['return_count', 'ambiguous_return_rows', 'unmatched_return_rows']:
@@ -541,7 +541,7 @@ def write_pipeline_report(result: PipelineResult, path: Path, input_hash: str):
         '指定代码 / 零价 / 合并排除行数': f'{df.stock_type.eq("excluded_stock").sum()} / {df.unit_price.eq(0).sum()} / {df.excluded_from_analysis.sum()}',
         'sales_facts行数 / 正向金额': f'{len(sales):,} / {sales.total_amount.sum():.6f}',
         '销售匿名行数 / 原始重复多余行': f'{sales.customer_id.isna().sum()} / {df.duplicate_extra.sum()}',
-        '大额数量标记行数 / 销售行数（已确认真实，保留）': f'{df.extreme_quantity_review.sum()} / {sales.extreme_quantity_review.sum()}',
+        '大额数量标记行数 / 销售行数（原因未确认，暂保留）': f'{df.extreme_quantity_review.sum()} / {sales.extreme_quantity_review.sum()}',
         '原始有客户数 / 有正向销售客户数 / RFM有效客户数': f'{df.customer_id.nunique()} / {gross_customers} / {len(features)}',
         '全退客户数（仍保留正向RFM）': int(features.fully_returned.sum()),
         'R基准日': df.invoice_datetime.max().date(),
@@ -565,7 +565,7 @@ def write_pipeline_report(result: PipelineResult, path: Path, input_hash: str):
 ## 已确认规则
 
 - 原始CSV只读，派生字段规范类型、清理首尾空白，缺失不填补。source_row关联原始数据行（从1开始，不含表头）；原始与分类审计明细保留在返回对象中。
-- 重复保留；极端大额已确认真实，保留。数量绝对值≥70000仅作标记，不作为错误或删除依据。
+- 重复保留。极端大额（80995、74215）与对应C单同客户、同商品、同单价，十几分钟内全额冲销，估计是录入错误后冲销；但未详细确认原因前不删除，保留在sales_facts中，数量绝对值≥70000仅作标记（extreme_quantity_review），不作为错误或删除依据。由于对应C单只进入returns_log，只看sales_facts的正向金额会包含这两笔，报表需结合returns_log看净额。
 - 指定代码与零价从分析层排除，审计层保留；其余未知代码按描述是否含ebay（不区分大小写）分为ebay或product，不含ebay及缺描述均归product。费用、礼券、测试、坏账不混入商品销售。
 - sales_facts仍为数字发票、product、正数量和正价格的销售明细，包含匿名，不从中删除后来被退款的原销售。金额=数量×单价，不代表实付。
 - returns_log保留全部C记录。正数量C、非商品和未匹配记录的匹配字段为NULL，不扣减客户金额。负数量非C的PADS保留在基础取消明细，不进入仅限C的退货输出。
@@ -613,7 +613,7 @@ def write_pipeline_report(result: PipelineResult, path: Path, input_hash: str):
 
 已断言销售正值、客户唯一性与有效客户覆盖、R非负、匹配键/时间/同价、累计数量、未匹配NULL、正向RFM金额与销售对账、审计净金额及按日分类金额对账。三份Parquet逐表回读与内存表完整比较。全表清洗使用向量化，仅约两万条退款使用有状态循环；固定排序和种子42，结果可复现。pipeline_log.txt记录分步耗时、未匹配明细及旧价格差异逐行复核。
 
-匿名不能可靠匹配或做RFM；同时间戳和跨销售行拼单退款不自动匹配。多候选只是规则推断，重复保留仍可能放大金额和可退数量。正式M为正向交易额，不代表退款后净消费；审计净金额不扣未匹配退款，仍可能偏高。极端大额按已确认真实处理。
+匿名不能可靠匹配或做RFM；同时间戳和跨销售行拼单退款不自动匹配。多候选只是规则推断，重复保留仍可能放大金额和可退数量。正式M为正向交易额，不代表退款后净消费；审计净金额不扣未匹配退款，仍可能偏高。极端大额估计是录入错误后冲销，原因未确认前按保留处理：sales_facts正向金额和这两位客户的正式M包含这两笔，net_monetary已扣除。
 
 README所需文件和字段、模块化、日志/异常、断言及性能要求均实现。按本次确认，正式RFM恢复README的正向口径；部分退货仍是等量匹配的已接受扩展。Q1、Q2代码不变。
 
